@@ -79,7 +79,12 @@ domain_companies = {
     'collabora.co.uk': 'collabora',
     'sencha.com': 'sencha',
     'profusion.mobi': 'samsung', # Samsung subcontractors.
-    'samsung.com': 'samsung'
+    'samsung.com': 'samsung',
+	'sisa.samsung.com': 'samsung',
+	'intel.com': 'intel',
+	'linux.intel.com': 'intel',
+	'adobe.com': 'adobe',
+	'motorola.com': 'motorola'
 }
 
 # Lists of particular names known to be in some companies.
@@ -92,12 +97,20 @@ other = {
         'rniwa@webkit.org',  # intern
         'shinichiro.hamaji@gmail.com',
         'scarybeasts@gmail.com',
+		'jchaffraix@webkit.org',
+		'noel.gordon@gmail.com',
+		'keishi@webkit.org',
+		'dkilzer@webkit.org'
     ],
 
     'apple': [
         'ap@webkit.org',
         'sam@webkit.org',
-        'joepeck@webkit.org'
+		'weinig@webkit.org',
+        'joepeck@webkit.org',
+		'jberlin@webkit.org',
+		'mitz@webkit.org',
+		'ddkilzer@webkit.org'
     ],
 
     'redhat': [
@@ -119,17 +132,24 @@ other = {
         'abecsi@webkit.org',
         'diegohcg@webkit.org',
         'loki@webkit.org',
-        'kim.gronholm@nomovok.com' # Nokia subcontractor
+        'kim.gronholm@nomovok.com' # Nokia subcontractor,
+		'cmarcelo@webkit.org',
+		'reni@webkit.org', # Member of szeged
+		'rgabor@webkit.org', # Member of szeged
+		'zeno@webkit.org',
+		'zbujtas@gmail.com'
     ],
 
     'rim': [
         'dbates@webkit.org',
         'zimmermann@webkit.org',
-        'krit@webkit.org'
+        'krit@webkit.org',
+		'rwlbuis@webkit.org',
+		'cmarcelo@webkit.org'
     ],
 
     'misc': [
-        'bfulgham@gmail.com',  # WinCairo
+        'bfulgham@webkit.org',  # WinCairo
         'cjerdonek@webkit.org',  # Random script/style cleanups?
         'jmalonzo@unpluggable.com',  # GTK
         'joanmarie.diggs@gmail.com',  # GTK Accessibility (Sun?)
@@ -142,17 +162,26 @@ other = {
         'alp@atoker.com',  # Did a lot of the GTK port for a company.
 
         # A post by him on a mailing list had Arora in the code snippet.
-        'robert@roberthogan.net',  # Qt, Arora
+        'robert@webkit.org',  # Qt, Arora
+
+		'jwieczorek@webkit.org', # Arora
 
         'cam@mcc.id.au',  # SVG
 
-        'paroga@paroga.com',  # WinCE
+        'paroga@webkit.org',  # WinCE
+		'robert@webkit.org', # torora
 
         # Inspector attracts all sorts of random hackers:
         'joepeck@webkit.org',
         'Patrick_Mueller@us.ibm.com',
         'casey.hattori@gmail.com',
-    ]
+    ],
+
+    'samsung': [
+        'rakuco@webkit.org',
+		'cshu@webkit.org'
+    ],
+
 }
 
 # One-off mapping of names to companies.
@@ -201,7 +230,13 @@ email_sets = [
     ['benjamin@webkit.org', 'ikipou@gmail.com'],
     ['zherczeg@webkit.org', 'hzoltan@inf.u-szeged.hu', 'horvath.zoltan.6@stud.u-szeged.hu'],
     ['abecsi@webkit.org', 'becsi.andras@stud.u-szeged.hu', 'abecsi@inf.u-szeged.hu'],
-    ['krit@webkit.org', 'vbs85@gmx.de']
+    ['krit@webkit.org', 'vbs85@gmx.de'],
+    ['weinig@webkit.org', 'sam@webkit.org'],
+    ['paroga@webkit.org', 'paroga@paroga.com'],
+    ['bfulgham@webkit.org', 'bfulgham@gmail.com'],
+    ['zimmermann@webkit.org', 'zimmermann@kde.org'],
+    ['jwieczorek@webkit.org', 'faw217@gmail.com'],
+    ['robert@webkit.org', 'robert@roberthogan.net']
 ]
 canon_map = {}
 for emails in email_sets:
