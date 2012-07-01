@@ -3,7 +3,7 @@
 import re
 import subprocess
 
-def parse_log(since='2 years ago'):
+def parse_log(since='2 years ago',until='today'):
     """Parse the commit log, yielding (date, author email) pairs.
 
     Parser is WebKit-aware: it knows the committer frequently isn't
@@ -20,7 +20,7 @@ def parse_log(since='2 years ago'):
     # Regexp for a in-ChangeLog commit message.
     patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
 
-    log = subprocess.Popen(['git', 'log', '--date=short', '--since=' + since],
+    log = subprocess.Popen(['git', 'log', '--date=short', '--since=' + since,'--until=' + until],
                            stdout=subprocess.PIPE)
     n = 0
     for line in log.stdout.xreadlines():

@@ -1,10 +1,24 @@
 #!/usr/bin/python
 
+import getopt, sys
 import operator
 import webkit
 
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "s:u:", ["since=", "until="])
+except getopt.GetoptError, err:
+	print str(err)
+since = "1 year ago"
+until = "today"
+for opt, arg in opts:
+	if opt in ("-s","--since="):
+		since = arg
+	elif opt in ("-u","--until="):
+		until = arg
+print "Commit counts by company between " + since + " and " + until
+
 counts = {}
-for date, author in webkit.parse_log():
+for date, author in webkit.parse_log(since,until):
     author = webkit.canonicalize_email(author)
     counts[author] = counts.get(author, 0) + 1
 
