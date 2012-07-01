@@ -13,12 +13,12 @@ def parse_log(since='2 years ago'):
     """
 
     commit_re = re.compile('^commit ')
-    author_re = re.compile('^Author: (\S+)')
+    author_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
     date_re = re.compile('^Date:\s+(\S+)')
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
     # Regexp for a in-ChangeLog commit message.
-    patch_re = re.compile('^    Patch by .+? <([^>]+?)> on \d\d\d\d-\d\d-\d\d')
+    patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
 
     log = subprocess.Popen(['git', 'log', '--date=short', '--since=' + since],
                            stdout=subprocess.PIPE)
