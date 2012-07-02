@@ -62,7 +62,6 @@ print "Generate commit counts graph by company between " + since + " and " + unt
 
 data = load_from_git(since,until)
 
-print data[0], data[-1]
 start = pylab.date2num(data[0][0])
 end = pylab.date2num(data[-1][0])
 time_range = numpy.arange(start, end + 1)
