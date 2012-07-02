@@ -43,11 +43,15 @@ def gauss_smooth(data, window=14):
     g = gauss(window)
     return numpy.convolve(data, g, mode='same')
 
+def smooth(data):
+    return gauss_smooth(data, window=30)
+    
 data = load_from_git()
 
 print data[0], data[-1]
 start = pylab.date2num(data[0][0])
 end = pylab.date2num(data[-1][0])
+time_range = numpy.arange(start, end + 1)
 
 companies = set(['google', 'apple', 'other'])
 commits = {}
@@ -60,16 +64,11 @@ for date, who in data:
         who = 'other'
     commits[who][date - start] += 1
 
-commits['google'] += commits['apple']
-commits['other'] += commits['google']
-
-smooth = lambda d: gauss_smooth(d, window=30)
-
 fig = plot.figure()
 ax = fig.add_subplot(111)
-ax.plot_date(range(start, end + 1), smooth(commits['apple']), '-')
-ax.plot_date(range(start, end + 1), smooth(commits['google']), '-')
-ax.plot_date(range(start, end + 1), smooth(commits['other']), '-')
+ax.plot_date(time_range, smooth(commits['apple']), '-',label='Apple')
+ax.plot_date(time_range, smooth(commits['google']), '-',label='Google')
+ax.plot_date(time_range, smooth(commits['other']), '-',label='Other')
 ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=3))
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))
 fig.autofmt_xdate()
