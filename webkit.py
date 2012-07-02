@@ -56,6 +56,7 @@ def parse_log(since='2 years ago',until='today'):
 domain_companies = {
     'chromium.org': 'google',
     'google.com': 'google',
+    'chromium.com': 'google',
     'apple.com': 'apple',
     'igalia.com': 'igalia',
     'nokia.com': 'nokia',
@@ -77,6 +78,7 @@ domain_companies = {
     # Seems to be contracting for Nokia on the Symbian port.
     'digia.com': 'nokia',
     'collabora.co.uk': 'collabora',
+    'collabora.com': 'collabora',
     'sencha.com': 'sencha',
     'profusion.mobi': 'samsung', # Samsung subcontractors.
     'samsung.com': 'samsung',
@@ -84,7 +86,11 @@ domain_companies = {
 	'intel.com': 'intel',
 	'linux.intel.com': 'intel',
 	'adobe.com': 'adobe',
-	'motorola.com': 'motorola'
+	'motorola.com': 'motorola',
+	'company100.net': 'company100',
+	'orange.com': 'orange',
+	'orange.fr': 'orange',
+	'softathome.com': 'orange'
 }
 
 # Lists of particular names known to be in some companies.
@@ -100,7 +106,8 @@ other = {
 		'jchaffraix@webkit.org',
 		'noel.gordon@gmail.com',
 		'keishi@webkit.org',
-		'dkilzer@webkit.org'
+		'dkilzer@webkit.org',
+		'eustas.bug@gmail.com' # Eugene Klyuchnikov
     ],
 
     'apple': [
@@ -137,7 +144,10 @@ other = {
 		'reni@webkit.org', # Member of szeged
 		'rgabor@webkit.org', # Member of szeged
 		'zeno@webkit.org',
-		'zbujtas@gmail.com'
+		'zbujtas@gmail.com',
+		'pierre.rossi@gmail.com',
+		'ahf@0x90.dk',
+		'jesus@webkit.org'
     ],
 
     'rim': [
@@ -147,6 +157,15 @@ other = {
 		'rwlbuis@webkit.org',
 		'cmarcelo@webkit.org'
     ],
+    
+    'qualcomm': [
+		'dtharp@codeaurora.org',
+		'tomz@codeaurora.org'
+	],
+	
+	'HP Palm': [
+		'luiz@webkit.org'
+	],
 
     'misc': [
         'bfulgham@webkit.org',  # WinCairo
@@ -175,12 +194,35 @@ other = {
         'joepeck@webkit.org',
         'Patrick_Mueller@us.ibm.com',
         'casey.hattori@gmail.com',
+        
+        # Mathml
+        'dbarton@mathscribe.com',
+        # Security
+        'serg.glazunov@gmail.com',
+        # ??
+        'dobey@wayofthemonkey.com',
+        'peter.rybin@gmail.com',
+        'alex@milowski.com'
     ],
 
     'samsung': [
         'rakuco@webkit.org',
-		'cshu@webkit.org'
+		'cshu@webkit.org',
+		'igor.oliveira@webkit.org',
+		'vivekgalatage@gmail.com' # Was at Nokia 
     ],
+    
+    'netflix': [
+		'agbakken@gmail.com'
+	],
+	
+	'sencha': [
+		'ariya@webkit.org'
+	],
+    
+    'bots': [
+		'webkit.review.bot@gmail.com'
+	]
 
 }
 
@@ -217,12 +259,13 @@ email_sets = [
     ['oszi@inf.u-szeged.hu', 'ossy@webkit.org'],
     ['hzoltan@inf.u-szeged.hu', 'horvath.zoltan.6@stud.u-szeged.hu',
      'zoltan@webkit.org'],
+    ['pvarga@inf.u-szeged.hu','pvarga@webkit.org'],
     ['jmalonzo@unpluggable.com', 'jmalonzo@webkit.org'],
     ['krit@webkit.org', 'vbs85@gmx.de'],
     ['cjerdonek@webkit.org', 'chris.jerdonek@gmail.com'],
     ['zwarich@apple.com', 'cwzwarich@uwaterloo.ca'],
     ['alp@atoker.com', 'alp@nuanti.com', 'alp@webkit.org'],
-    ['treat@rim.com', 'treat@webkit.org'],
+    ['treat@rim.com', 'treat@webkit.org','treat@kde.org'],
     ['rniwa@webkit.org', 'ryosuke.niwa@gmail.com'],
     ['christian@twotoasts.de', 'christian@webkit.org', 'christian@twoasts.de'],
     ['george.staikos@torchmobile.com', 'staikos@kde.org', 'staikos@webkit.org'],
@@ -236,7 +279,11 @@ email_sets = [
     ['bfulgham@webkit.org', 'bfulgham@gmail.com'],
     ['zimmermann@webkit.org', 'zimmermann@kde.org'],
     ['jwieczorek@webkit.org', 'faw217@gmail.com'],
-    ['robert@webkit.org', 'robert@roberthogan.net']
+    ['robert@webkit.org', 'robert@roberthogan.net'],
+    ['kevin.cs.oh@gmail.com','shivamidow@gmail.com'],
+    ['jpfau@apple.com','jeffrey@endrift.com'],
+    ["rwlbuis@webkit.org", "rwlbuis@gmail.com", "rbuis@rim.com"],
+    ["mlilek@apple.com", "webkit@mattlilek.com", "pewtermoose@webkit.org"]
 ]
 canon_map = {}
 for emails in email_sets:
