@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import getopt, sys
 import webkit
 import pylab
 import matplotlib.pyplot as plot
@@ -8,9 +9,9 @@ import datetime
 import numpy
 import sys
 
-def load_from_git():
+def load_from_git(since,until):
     data = []
-    for date, author in webkit.parse_log(since='2 years ago'):
+    for date, author in webkit.parse_log(since,until):
         author = webkit.canonicalize_email(author)
         company = webkit.classify_email(author)
         date = datetime.date(*map(int, date.split('-')))
@@ -45,8 +46,21 @@ def gauss_smooth(data, window=14):
 
 def smooth(data):
     return gauss_smooth(data, window=30)
-    
-data = load_from_git()
+
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "s:u:", ["since=", "until="])
+except getopt.GetoptError, err:
+	print str(err)
+since = "2 years ago"
+until = "today"
+for opt, arg in opts:
+	if opt in ("-s","--since="):
+		since = arg
+	elif opt in ("-u","--until="):
+		until = arg
+print "Generate commit counts graph by company between " + since + " and " + until    
+
+data = load_from_git(since,until)
 
 print data[0], data[-1]
 start = pylab.date2num(data[0][0])
