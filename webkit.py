@@ -15,6 +15,7 @@ def parse_log(since='2 years ago',until='today'):
     commit_re = re.compile('^commit ')
     author_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
     date_re = re.compile('^Date:\s+(\S+)')
+    topics_re = re.compile('^    ((?:\[\w+\])+)')
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
     # Regexp for a in-ChangeLog commit message.
@@ -28,9 +29,10 @@ def parse_log(since='2 years ago',until='today'):
             if n > 0:
                 if ' and ' in author:
                     author = author[0:author.find(' and ')]
-                yield date, author
+                yield date, author, topics
             author = None
             date = None
+            topics = None
             n += 1
             continue
         match = author_re.match(line)
@@ -41,6 +43,10 @@ def parse_log(since='2 years ago',until='today'):
         if match:
             date = match.group(1)
             continue
+        match = topics_re.match(line)
+        if match:
+			topics = re.findall("\w+",match.group(1))
+			continue
         match = changelog_re.match(line)
         if match:
             author = match.group(1)
