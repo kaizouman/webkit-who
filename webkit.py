@@ -15,15 +15,25 @@ def parse_log(since='2 years ago',until='today'):
     commit_re = re.compile('^commit ')
     author_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
     date_re = re.compile('^Date:\s+(\S+)')
-    topics_re = re.compile('^    ((?:\[\w+\])+)')
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
     # Regexp for a in-ChangeLog commit message.
     patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
+    # Regexp for tags inserted using brackets in the patch summary
+    tags_s_re = re.compile('^\s+((?:\[\w+\])+)')
+    # Regexp for tags inserted as change headers in the patch details
+    tags_d_re = re.compile('^\s+(?:\.\./)*(?:Source/)?(?:WebKit/)?(?:platform/)?(?:ThirdParty/)?([\w/]+)\:(?![/\:])')
+    # Regexp to identify unambiguous topic names in the description text
+    ports_re = re.compile('^\s+[^\*\(\s].*\s(mac|safari|lion|leopard|qt|gtk|chromium|blackberry|efl|wx|wince|cairo|regression).*',re.IGNORECASE)
+    # Regexp for platform specific modified files
+    platform_re = re.compile('^\s+\*\s(?:platform|plugins|history|editing|bridge|accessibility)/(?:graphics/)?(?:network/)?(mac|qt|gtk|chromium|wx|win|wince|efl|blackberry)/')
 
     log = subprocess.Popen(['git', 'log', '--date=short', '--since=' + since,'--until=' + until],
                            stdout=subprocess.PIPE)
     n = 0
+    author = None
+    date = None
+    topics = None
     for line in log.stdout.xreadlines():
         if commit_re.match(line):
             if n > 0:
@@ -39,14 +49,6 @@ def parse_log(since='2 years ago',until='today'):
         if match:
             author = match.group(1)
             continue
-        match = date_re.match(line)
-        if match:
-            date = match.group(1)
-            continue
-        match = topics_re.match(line)
-        if match:
-			topics = re.findall("\w+",match.group(1))
-			continue
         match = changelog_re.match(line)
         if match:
             author = match.group(1)
@@ -55,6 +57,41 @@ def parse_log(since='2 years ago',until='today'):
         if match:
             author = match.group(1)
             continue
+        match = date_re.match(line)
+        if match:
+            date = match.group(1)
+            continue
+        match = tags_s_re.match(line)
+        if match:
+			if topics == None:
+				topics = []
+			topics.extend(re.findall("\w+",match.group(1)))
+			continue
+        match = tags_d_re.match(line)
+        if match:
+			if topics == None:
+				topics = []
+			topic = match.group(1)
+			topics.append(match.group(1))
+			continue
+        match = ports_re.match(line)
+        if match:
+			if topics == None:
+				topics = []
+			topic = match.group(1)
+			if topics.count(topic) == 0:
+				topics.append(topic)
+			continue
+        match = platform_re.match(line)
+        if match:
+			if topics == None:
+				topics = []
+			topic = match.group(1)
+			if topics.count(topic) == 0:
+				topics.append(topic)
+			continue
+    yield date, author, topics
+       
 
 # See:  http://trac.webkit.org/wiki/WebKit%20Team
 
@@ -326,3 +363,27 @@ def classify_email(email):
         return 'apple'
 
     return 'unknown'
+
+
+topic_sets = [
+    ['mac', 'safari', 'leopard', 'lion'],
+    ['chromium', 'chrome', 'skia'],
+    ['gtk', 'cairo', 'soup', 'gstreamer'],
+    ['qt', 'qtwebkit'],
+    ['win', 'windows', 'wincairo'],
+    ['jsc', 'javascriptcore'],
+    ['tools', 'webkittools' ],
+    ['tests', 'test', 'layouttest', 'layouttests' , 'performancetests' ],
+    ['wk2', 'webkit2']
+]
+
+canon_topic_map = {}
+for topics in topic_sets:
+	for topic in topics[1:]:
+		canon_topic_map[topic] = topics[0]
+
+def canonicalize_topic(topic):
+    """Return a generic topic for close devts"""
+    if topic in canon_topic_map:
+        return canon_topic_map[topic]
+    return topic

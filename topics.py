@@ -17,15 +17,21 @@ for opt, arg in opts:
 		until = arg
 print "Commit counts by topics between " + since + " and " + until
 
+nbcommits = 0
 counts = {}
 for date, author, topics in webkit.parse_log(since,until):
 	if topics:
 		for topic in topics:
-			counts[topic] = counts.get(topic, 0) + 1
+			topic_lower = webkit.canonicalize_topic(topic.lower())
+			# We only count Test topics if we haven't anything else
+			if "test" not in topic.lower() or len(topics) == 1:
+				counts[topic_lower] = counts.get(topic_lower, 0) + 1
 	else:
 		counts['Other'] = counts.get('Other',0) + 1
+	nbcommits = nbcommits +1
 
+print '# commits: %d' % (nbcommits)
 for topic, count in sorted(counts.iteritems(), key=operator.itemgetter(1),
                              reverse=True):
-    print '%s: %d' % (topic, count)
+	print '%s: %d' % (topic, count)
 
