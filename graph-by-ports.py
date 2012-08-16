@@ -9,18 +9,24 @@ import datetime
 import numpy
 import sys
 
-def load_from_git(since,until):
+def load_from_git(since,until,company=None):
     data = []
     for date, author, topics in webkit.parse_log(since,until):
-        date = datetime.date(*map(int, date.split('-')))
-        if topics:
-			for topic in topics:
-				topic_lower = webkit.canonicalize_topic(topic.lower())
-				# We only count Test topics if we haven't anything else
-				if "test" not in topic.lower() or len(topics) == 1:
-					data.append((date, topic))
-        else:
-			data.append((date, 'other'))
+		filtered_out = False
+		if company:
+			author = webkit.canonicalize_email(author)
+			author_company = webkit.classify_email(author)
+			filtered_out = (author_company != company)
+		if not filtered_out: 
+			date = datetime.date(*map(int, date.split('-')))
+			if topics:
+				for topic in topics:
+					topic_lower = webkit.canonicalize_topic(topic.lower())
+					# We only count Test topics if we haven't anything else
+					if "test" not in topic.lower() or len(topics) == 1:
+						data.append((date, topic))
+			else:
+				data.append((date, 'other'))
     data.reverse()
     return data
 
@@ -54,19 +60,21 @@ def smooth(data):
     return lin_smooth(data, window=30)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "s:u:", ["since=", "until="])
+	opts, args = getopt.getopt(sys.argv[1:], "s:u:c:", ["since=", "until=", "company="])
 except getopt.GetoptError, err:
 	print str(err)
 since = "2 years ago"
 until = "today"
+company = None
 for opt, arg in opts:
 	if opt in ("-s","--since="):
 		since = arg
 	elif opt in ("-u","--until="):
 		until = arg
-print "Generate commit counts graph by ports between " + since + " and " + until    
-
-data = load_from_git(since,until)
+	elif opt in ("-c","--company="):
+		company = arg
+print "Generate commit counts graph by ports between " + since + " and " + until
+data = load_from_git(since,until,company)
 
 start = pylab.date2num(data[0][0])
 end = pylab.date2num(data[-1][0])
@@ -91,9 +99,12 @@ ax.plot_date(time_range, smooth(commits['qt']), '-',label='Qt')
 ax.plot_date(time_range, smooth(commits['gtk']), '-',label='GTK')
 ax.plot_date(time_range, smooth(commits['efl']), '-',label='EFL')
 ax.plot_date(time_range, smooth(commits['blackberry']), '-',label='BlackBerry')
-#ax.plot_date(time_range, smooth(commits['other']), '-',label='Other')
+ax.plot_date(time_range, smooth(commits['other']), '-',label='Other')
 ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=3))
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))
 fig.autofmt_xdate()
 ax.legend(loc='upper left')
-pylab.savefig('graph-by-ports.png')
+filename = 'graph-by-ports.png'
+if company:
+	filename = company + '-' + filename
+pylab.savefig(filename)
