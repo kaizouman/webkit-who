@@ -45,7 +45,8 @@ def gauss_smooth(data, window=14):
     return numpy.convolve(data, g, mode='same')
 
 def smooth(data):
-    return gauss_smooth(data, window=30)
+    #return gauss_smooth(data, window=30)
+    return lin_smooth(data, window=30)
 
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "s:u:", ["since=", "until="])
@@ -66,7 +67,7 @@ start = pylab.date2num(data[0][0])
 end = pylab.date2num(data[-1][0])
 time_range = numpy.arange(start, end + 1)
 
-companies = set(['google', 'apple', 'other'])
+companies = set(['google', 'apple', 'nokia', 'intel', 'samsung','igalia', 'other'])
 commits = {}
 for company in companies:
     commits[company] = numpy.zeros(end - start + 1)
@@ -84,6 +85,7 @@ ax.plot_date(time_range, smooth(commits['google']), '-',label='Google')
 ax.plot_date(time_range, smooth(commits['nokia']), '-',label='Nokia')
 ax.plot_date(time_range, smooth(commits['intel']), '-',label='Intel')
 ax.plot_date(time_range, smooth(commits['samsung']), '-',label='Samsung')
+ax.plot_date(time_range, smooth(commits['igalia']), '-',label='Igalia')
 ax.plot_date(time_range, smooth(commits['other']), '-',label='Other')
 ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=3))
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))
