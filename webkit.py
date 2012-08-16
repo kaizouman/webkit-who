@@ -367,7 +367,7 @@ def classify_email(email):
 
 topic_sets = [
     ['mac', 'safari', 'leopard', 'lion'],
-    ['chromium', 'chrome', 'skia'],
+    ['chromium', 'chrome', 'skia', 'angle'],
     ['gtk', 'cairo', 'soup', 'gstreamer'],
     ['qt', 'qtwebkit'],
     ['win', 'windows', 'wincairo'],
