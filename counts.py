@@ -17,13 +17,17 @@ for opt, arg in opts:
 		until = arg
 print "Commit counts by company between " + since + " and " + until
 
+nbcommits = 0
 counts = {}
 for date, author, topics in webkit.parse_log(since,until):
     author = webkit.canonicalize_email(author)
     counts[author] = counts.get(author, 0) + 1
+    nbcommits = nbcommits + 1
 
 companies = {}
 unknown = {}
+print '# commits: %d' % (nbcommits)
+
 for email, count in counts.iteritems():
     company = webkit.classify_email(email)
     companies[company] = companies.get(company, 0) + count
