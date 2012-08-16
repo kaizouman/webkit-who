@@ -91,4 +91,4 @@ ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interva
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))
 fig.autofmt_xdate()
 ax.legend(loc='upper left')
-pylab.savefig('graph.png')
+pylab.savefig('graph-by-company.png')
