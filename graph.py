@@ -11,7 +11,7 @@ import sys
 
 def load_from_git(since,until):
     data = []
-    for date, author in webkit.parse_log(since,until):
+    for date, author, topics in webkit.parse_log(since,until):
         author = webkit.canonicalize_email(author)
         company = webkit.classify_email(author)
         date = datetime.date(*map(int, date.split('-')))
@@ -81,6 +81,9 @@ fig = plot.figure()
 ax = fig.add_subplot(111)
 ax.plot_date(time_range, smooth(commits['apple']), '-',label='Apple')
 ax.plot_date(time_range, smooth(commits['google']), '-',label='Google')
+ax.plot_date(time_range, smooth(commits['nokia']), '-',label='Nokia')
+ax.plot_date(time_range, smooth(commits['intel']), '-',label='Intel')
+ax.plot_date(time_range, smooth(commits['samsung']), '-',label='Samsung')
 ax.plot_date(time_range, smooth(commits['other']), '-',label='Other')
 ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=3))
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))

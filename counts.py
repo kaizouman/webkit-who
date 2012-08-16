@@ -18,7 +18,7 @@ for opt, arg in opts:
 print "Commit counts by company between " + since + " and " + until
 
 counts = {}
-for date, author in webkit.parse_log(since,until):
+for date, author, topics in webkit.parse_log(since,until):
     author = webkit.canonicalize_email(author)
     counts[author] = counts.get(author, 0) + 1
 
