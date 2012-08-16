@@ -9,13 +9,21 @@ import datetime
 import numpy
 import sys
 
-def load_from_git(since,until):
+def load_from_git(since,until,port=None):
     data = []
     for date, author, topics in webkit.parse_log(since,until):
-        author = webkit.canonicalize_email(author)
-        company = webkit.classify_email(author)
-        date = datetime.date(*map(int, date.split('-')))
-        data.append((date, company))
+		filtered_out = False
+		if port:
+			filtered_out = True
+			if topics:
+				for topic in topics:
+					topic = webkit.canonicalize_topic(topic.lower())
+					filtered_out = filtered_out and (port != topic)
+		if not filtered_out:
+			author = webkit.canonicalize_email(author)
+			company = webkit.classify_email(author)
+			date = datetime.date(*map(int, date.split('-')))
+			data.append((date, company))
     data.reverse()
     return data
 
@@ -49,19 +57,22 @@ def smooth(data):
     return lin_smooth(data, window=30)
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], "s:u:", ["since=", "until="])
+	opts, args = getopt.getopt(sys.argv[1:], "s:u:p:", ["since=", "until=", "port="])
 except getopt.GetoptError, err:
 	print str(err)
 since = "2 years ago"
 until = "today"
+port = None
 for opt, arg in opts:
 	if opt in ("-s","--since="):
 		since = arg
 	elif opt in ("-u","--until="):
 		until = arg
+	elif opt in ("-p","--port="):
+		port = arg
 print "Generate commit counts graph by company between " + since + " and " + until    
 
-data = load_from_git(since,until)
+data = load_from_git(since,until,port)
 
 start = pylab.date2num(data[0][0])
 end = pylab.date2num(data[-1][0])
@@ -91,4 +102,7 @@ ax.xaxis.set_major_locator(dates.MonthLocator(range(1,13), bymonthday=1, interva
 ax.xaxis.set_minor_locator(dates.MonthLocator(range(1,13), bymonthday=1, interval=1))
 fig.autofmt_xdate()
 ax.legend(loc='upper left')
-pylab.savefig('graph-by-company.png')
+filename = 'graph-by-companies.png'
+if port:
+	filename = port + '-' + filename
+pylab.savefig(filename)
