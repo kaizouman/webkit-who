@@ -19,7 +19,7 @@ def parse_log(since='2 years ago',until='today'):
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
     # Regexp for a Reviewed By message
-    reviewed_re = re.compile('^\s+Reviewed\sby\s+([\w\s]+)')
+    reviewed_re = re.compile('^\s+(?:Reviewed|Rubber-stamped|Rubber stamped|Suggested)\sby\s+([\w\s]+)')
     # Regexp for a in-ChangeLog commit message.
     patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
     
@@ -49,6 +49,9 @@ def parse_log(since='2 years ago',until='today'):
                 topics = unambiguous_tags_re.findall(subject)
                 if not topics:
                     topics = ambiguous_tags_re.findall(subject)
+                    if not topics: 
+						if build_fix_re.match(subject):
+							topics = ['build fix']
             insubject = False
             continue
         # End of commit
@@ -65,7 +68,7 @@ def parse_log(since='2 years ago',until='today'):
                         d[x.lower()] = 1
                     topics = list(d.keys())
             #if not topics:
-                #print subject
+            #    print subject
             yield date, author, topics          
             continue   
         # Start of commit 
@@ -90,22 +93,18 @@ def parse_log(since='2 years ago',until='today'):
             if match:
                 date = match.group(1)
                 continue
-        if date and (template == Templates.UNKNOWN):
+        if date and not insubject:
             match = changelog_re.match(line)
             if match:
-                template = Templates.A
                 author = match.group(1)
                 continue
             else:
-                template = Templates.B
-                insubject = True
-        if not insubject:
-            match = reviewed_re.match(line)
-            if match:
-                reviewer = match.group(1)
-                continue
-            elif subject=="":
-                insubject = True
+                match = reviewed_re.match(line)
+                if match:
+                    reviewer = match.group(1)
+                    continue
+                elif subject=="":
+                    insubject = True
         if insubject:
             match = re.match("^(.*)$",line)
             subject = subject + match.group(1)
@@ -413,7 +412,7 @@ def classify_email(email):
 topic_sets = [
     ['mac', 'safari', 'leopard', 'lion'],
     ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome', 'skia', 'angle', 'v8'],
-    ['gtk', 'gtk+', 'cairo', 'soup', 'gstreamer'],
+    ['gtk', 'gtk2', 'cairo', 'soup', 'gstreamer'],
     ['qt', 'qtwebkit'],
     ['win', 'wince', 'windows', 'wincairo'],
     ['jsc', 'javascriptcore'],
@@ -431,7 +430,7 @@ topic_sets = [
     ['cmake'],
     ['nrwt'],
     ['indexeddb'],
-    ['maintenance', 'rolled deps', 'rolling out', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations']
+    ['maintenance', 'rolled deps', 'rolling out', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations' , 'build fix', 'bump', 'versioning', 'changelog']
 ]
 
 # Prepare a regexp to identify non ambiguous topic names
@@ -440,20 +439,24 @@ topics_re_str =""
 # Gather topic names
 for topics in topic_sets:
     for topic in topics:
-        # Mac and Windows are too ambiguous
-        if topic != "mac" and topic != "windows":
+        # Some tags are too ambiguous
+        if topic not in ["mac","windows"]:
             if topics_re_str == "":
                 topics_re_str = "[\[\s/](" + topic
             else:
                 topics_re_str = topics_re_str + "|" + topic
 if topics_re_str != "":
-    topics_re_str = topics_re_str + ")[\]\s\.\:,\(/]"
+    topics_re_str = topics_re_str + ")[\]\s\.\:,\(/\+]"
 
 # Regexp to identify unambiguous topic names
 unambiguous_tags_re = re.compile(topics_re_str,re.IGNORECASE)
 
 # Regexp to identify ambiguous topic names
 ambiguous_tags_re = re.compile("[\[\s/](mac|windows)[\]\s\.\:,\(/]",re.IGNORECASE)
+
+# Regexp to identify build fixes
+build_fix_re = re.compile("^.*(fix.*(build|compilation))|((build|compilation).*fix)",re.IGNORECASE)
+#build_fix_re = re.compile("^.*(fix)",re.IGNORECASE)
         
 canon_topic_map = {}
 for topics in topic_sets:
