@@ -12,86 +12,131 @@ def parse_log(since='2 years ago',until='today'):
     |since| is an argument for the --since flag to git log.
     """
 
-    commit_re = re.compile('^commit ')
-    author_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
+    commit_re = re.compile('^commit (\w+)')
+    committer_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
     date_re = re.compile('^Date:\s+(\S+)')
+    
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
+    # Regexp for a Reviewed By message
+    reviewed_re = re.compile('^\s+Reviewed\sby\s+([\w\s]+)')
     # Regexp for a in-ChangeLog commit message.
     patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
-    # Regexp for tags inserted using brackets in the patch summary
-    tags_s_re = re.compile('^\s+((?:\[\w+\])+)')
+    
     # Regexp for tags inserted as change headers in the patch details
     tags_d_re = re.compile('^\s+(?:\.\./)*(?:Source/)?(?:WebKit/)?(?:platform/)?(?:ThirdParty/)?([\w/]+)\:(?![/\:])')
-    # Regexp to identify unambiguous topic names in the description text
-    ports_re = re.compile('^\s+[^\*\(\s].*\s(mac|safari|lion|leopard|qt|gtk|chromium|blackberry|efl|wx|wince|cairo|regression).*',re.IGNORECASE)
     # Regexp for platform specific modified files
     platform_re = re.compile('^\s+\*\s(?:platform|plugins|history|editing|bridge|accessibility)/(?:graphics/)?(?:network/)?(mac|qt|gtk|chromium|wx|win|wince|efl|blackberry)/')
+    
+    # Regexp for the end of commit
+    end_re = re.compile('^\s+git-svn-id')
 
     log = subprocess.Popen(['git', 'log', '--date=short', '--since=' + since,'--until=' + until],
                            stdout=subprocess.PIPE)
-    n = 0
-    author = None
-    date = None
-    topics = None
+    
+    # We can have one of the two following log templates:
+    # A - Git Header, Changelog, (Reviewed by|Subject), Description, Files
+    # B - Git Header Subject, Reviewed by, Description, Files
+    # (where Git header is commit/committer/date) 
+    Templates = enum(UNKNOWN=0,A=1,B=2)
+    
+    insubject = False
     for line in log.stdout.xreadlines():
-        if commit_re.match(line):
-            if n > 0:
-                if ' and ' in author:
-                    author = author[0:author.find(' and ')]
-                yield date, author, topics
-            author = None
+        # We skip blank lines and use them to separate blocks
+        if re.match("^\s*$",line):
+            if insubject:
+                # Parse the subject for relevant topics
+                topics = unambiguous_tags_re.findall(subject)
+                if not topics:
+                    topics = ambiguous_tags_re.findall(subject)
+            insubject = False
+            continue
+        # End of commit
+        match = end_re.match(line)
+        if match:
+            if not author:
+                author = committer
+            if ' and ' in author:
+                author = author[0:author.find(' and ')]
+                if topics:
+                    # Convert to lower case and remove duplicates
+                    d = {}
+                    for x in topics:
+                        d[x.lower()] = 1
+                    topics = list(d.keys())
+            #if not topics:
+                #print subject
+            yield date, author, topics          
+            continue   
+        # Start of commit 
+        match = commit_re.match(line)
+        if match: 
+            commit = match.group(1)
+            template = Templates.UNKNOWN
+            committer = None
             date = None
+            author = None
+            subject = ""
+            reviewer = None
             topics = None
-            n += 1
             continue
-        match = author_re.match(line)
-        if match:
-            author = match.group(1)
+        if commit:
+            match = committer_re.match(line)
+            if match:
+                committer = match.group(1)
+                continue
+        if committer:
+            match = date_re.match(line)
+            if match:
+                date = match.group(1)
+                continue
+        if date and (template == Templates.UNKNOWN):
+            match = changelog_re.match(line)
+            if match:
+                template = Templates.A
+                author = match.group(1)
+                continue
+            else:
+                template = Templates.B
+                insubject = True
+        if not insubject:
+            match = reviewed_re.match(line)
+            if match:
+                reviewer = match.group(1)
+                continue
+            elif subject=="":
+                insubject = True
+        if insubject:
+            match = re.match("^(.*)$",line)
+            subject = subject + match.group(1)
             continue
-        match = changelog_re.match(line)
-        if match:
-            author = match.group(1)
-            continue
+        # If we went this far we have reached the description
         match = patch_re.match(line)
         if match:
             author = match.group(1)
             continue
-        match = date_re.match(line)
-        if match:
-            date = match.group(1)
-            continue
-        match = tags_s_re.match(line)
-        if match:
-			if topics == None:
-				topics = []
-			topics.extend(re.findall("\w+",match.group(1)))
-			continue
         match = tags_d_re.match(line)
         if match:
-			if topics == None:
-				topics = []
-			topic = match.group(1)
-			topics.append(match.group(1))
-			continue
-        match = ports_re.match(line)
-        if match:
-			if topics == None:
-				topics = []
-			topic = match.group(1)
-			if topics.count(topic) == 0:
-				topics.append(topic)
-			continue
+            if topics == None:
+                topics = []
+            topic = match.group(1)
+            topics.append(match.group(1))
+            continue
         match = platform_re.match(line)
         if match:
-			if topics == None:
-				topics = []
-			topic = match.group(1)
-			if topics.count(topic) == 0:
-				topics.append(topic)
-			continue
-    yield date, author, topics
-       
+            if topics == None:
+                topics = []
+            topic = match.group(1)
+            if topics.count(topic) == 0:
+                topics.append(topic)
+            continue       
+
+def parse_subject(subject=''):
+           
+    # Regexp to identify unambiguous topic names
+    tags_re = re.compile(topics_re_str,re.IGNORECASE)
+
+    return unambiguous_tags_re.findall(subject)
 
 # See:  http://trac.webkit.org/wiki/WebKit%20Team
 
@@ -125,15 +170,15 @@ domain_companies = {
     'sencha.com': 'sencha',
     'profusion.mobi': 'samsung', # Samsung subcontractors.
     'samsung.com': 'samsung',
-	'sisa.samsung.com': 'samsung',
-	'intel.com': 'intel',
-	'linux.intel.com': 'intel',
-	'adobe.com': 'adobe',
-	'motorola.com': 'motorola',
-	'company100.net': 'company100',
-	'orange.com': 'orange',
-	'orange.fr': 'orange',
-	'softathome.com': 'orange'
+    'sisa.samsung.com': 'samsung',
+    'intel.com': 'intel',
+    'linux.intel.com': 'intel',
+    'adobe.com': 'adobe',
+    'motorola.com': 'motorola',
+    'company100.net': 'company100',
+    'orange.com': 'orange',
+    'orange.fr': 'orange',
+    'softathome.com': 'orange'
 }
 
 # Lists of particular names known to be in some companies.
@@ -146,21 +191,21 @@ other = {
         'rniwa@webkit.org',  # intern
         'shinichiro.hamaji@gmail.com',
         'scarybeasts@gmail.com',
-		'jchaffraix@webkit.org',
-		'noel.gordon@gmail.com',
-		'keishi@webkit.org',
-		'dkilzer@webkit.org',
-		'eustas.bug@gmail.com' # Eugene Klyuchnikov
+        'jchaffraix@webkit.org',
+        'noel.gordon@gmail.com',
+        'keishi@webkit.org',
+        'dkilzer@webkit.org',
+        'eustas.bug@gmail.com' # Eugene Klyuchnikov
     ],
 
     'apple': [
         'ap@webkit.org',
         'sam@webkit.org',
-		'weinig@webkit.org',
+        'weinig@webkit.org',
         'joepeck@webkit.org',
-		'jberlin@webkit.org',
-		'mitz@webkit.org',
-		'ddkilzer@webkit.org'
+        'jberlin@webkit.org',
+        'mitz@webkit.org',
+        'ddkilzer@webkit.org'
     ],
 
     'redhat': [
@@ -183,32 +228,32 @@ other = {
         'diegohcg@webkit.org',
         'loki@webkit.org',
         'kim.gronholm@nomovok.com' # Nokia subcontractor,
-		'cmarcelo@webkit.org',
-		'reni@webkit.org', # Member of szeged
-		'rgabor@webkit.org', # Member of szeged
-		'zeno@webkit.org',
-		'zbujtas@gmail.com',
-		'pierre.rossi@gmail.com',
-		'ahf@0x90.dk',
-		'jesus@webkit.org'
+        'cmarcelo@webkit.org',
+        'reni@webkit.org', # Member of szeged
+        'rgabor@webkit.org', # Member of szeged
+        'zeno@webkit.org',
+        'zbujtas@gmail.com',
+        'pierre.rossi@gmail.com',
+        'ahf@0x90.dk',
+        'jesus@webkit.org'
     ],
 
     'rim': [
         'dbates@webkit.org',
         'zimmermann@webkit.org',
         'krit@webkit.org',
-		'rwlbuis@webkit.org',
-		'cmarcelo@webkit.org'
+        'rwlbuis@webkit.org',
+        'cmarcelo@webkit.org'
     ],
     
     'qualcomm': [
-		'dtharp@codeaurora.org',
-		'tomz@codeaurora.org'
-	],
-	
-	'HP Palm': [
-		'luiz@webkit.org'
-	],
+        'dtharp@codeaurora.org',
+        'tomz@codeaurora.org'
+    ],
+    
+    'HP Palm': [
+        'luiz@webkit.org'
+    ],
 
     'misc': [
         'bfulgham@webkit.org',  # WinCairo
@@ -226,12 +271,12 @@ other = {
         # A post by him on a mailing list had Arora in the code snippet.
         'robert@webkit.org',  # Qt, Arora
 
-		'jwieczorek@webkit.org', # Arora
+        'jwieczorek@webkit.org', # Arora
 
         'cam@mcc.id.au',  # SVG
 
         'paroga@webkit.org',  # WinCE
-		'robert@webkit.org', # torora
+        'robert@webkit.org', # torora
 
         # Inspector attracts all sorts of random hackers:
         'joepeck@webkit.org',
@@ -250,22 +295,22 @@ other = {
 
     'samsung': [
         'rakuco@webkit.org',
-		'cshu@webkit.org',
-		'igor.oliveira@webkit.org',
-		'vivekgalatage@gmail.com' # Was at Nokia 
+        'cshu@webkit.org',
+        'igor.oliveira@webkit.org',
+        'vivekgalatage@gmail.com' # Was at Nokia 
     ],
     
     'netflix': [
-		'agbakken@gmail.com'
-	],
-	
-	'sencha': [
-		'ariya@webkit.org'
-	],
+        'agbakken@gmail.com'
+    ],
+    
+    'sencha': [
+        'ariya@webkit.org'
+    ],
     
     'bots': [
-		'webkit.review.bot@gmail.com'
-	]
+        'webkit.review.bot@gmail.com'
+    ]
 
 }
 
@@ -367,23 +412,59 @@ def classify_email(email):
 
 topic_sets = [
     ['mac', 'safari', 'leopard', 'lion'],
-    ['chromium', 'chrome', 'skia', 'angle'],
-    ['gtk', 'cairo', 'soup', 'gstreamer'],
+    ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome', 'skia', 'angle', 'v8'],
+    ['gtk', 'gtk+', 'cairo', 'soup', 'gstreamer'],
     ['qt', 'qtwebkit'],
-    ['win', 'windows', 'wincairo'],
+    ['win', 'wince', 'windows', 'wincairo'],
     ['jsc', 'javascriptcore'],
     ['tools', 'webkittools' ],
     ['tests', 'test', 'layouttest', 'layouttests' , 'performancetests' ],
-    ['wk2', 'webkit2']
+    ['wk2', 'webkit2'],
+    ['wx'],
+    ['efl'],
+    ['regression'],
+    ['blackberry'],
+    ['webcore'],
+    ['texmap', 'texturemapper'],
+    ['webinspector', 'web inspector'],
+    ['css', 'css2', 'css3' ],
+    ['cmake'],
+    ['nrwt'],
+    ['indexeddb'],
+    ['maintenance', 'rolled deps', 'rolling out', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations']
 ]
 
+# Prepare a regexp to identify non ambiguous topic names
+topics_re_str =""
+
+# Gather topic names
+for topics in topic_sets:
+    for topic in topics:
+        # Mac and Windows are too ambiguous
+        if topic != "mac" and topic != "windows":
+            if topics_re_str == "":
+                topics_re_str = "[\[\s/](" + topic
+            else:
+                topics_re_str = topics_re_str + "|" + topic
+if topics_re_str != "":
+    topics_re_str = topics_re_str + ")[\]\s\.\:,\(/]"
+
+# Regexp to identify unambiguous topic names
+unambiguous_tags_re = re.compile(topics_re_str,re.IGNORECASE)
+
+# Regexp to identify ambiguous topic names
+ambiguous_tags_re = re.compile("[\[\s/](mac|windows)[\]\s\.\:,\(/]",re.IGNORECASE)
+        
 canon_topic_map = {}
 for topics in topic_sets:
-	for topic in topics[1:]:
-		canon_topic_map[topic] = topics[0]
+    for topic in topics[1:]:
+        canon_topic_map[topic] = topics[0]
 
 def canonicalize_topic(topic):
     """Return a generic topic for close devts"""
     if topic in canon_topic_map:
         return canon_topic_map[topic]
     return topic
+
+def enum(**enums):
+    return type('Enum', (), enums)
