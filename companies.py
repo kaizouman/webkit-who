@@ -7,7 +7,7 @@ from collections import defaultdict
 start = None
 end = None
 data = defaultdict(lambda: defaultdict(lambda: 0))
-for date, author in webkit.parse_log(since='3 years ago'):
+for date, author, topics in webkit.parse_log(since='3 years ago'):
     author = webkit.canonicalize_email(author)
     company = webkit.classify_email(author)
     date = datetime.date(*map(int, date.split('-')))
@@ -17,7 +17,7 @@ for date, author in webkit.parse_log(since='3 years ago'):
         end = date
     data[date][company] += 1
 
-show_companies = set(['google', 'apple', 'nokia', 'rim'])
+show_companies = set(['google', 'apple', 'nokia', 'intel', 'samsung','igalia', 'rim', 'other'])
 print "Date," + ','.join(show_companies) + ",other"
 date = start
 while date <= end:
