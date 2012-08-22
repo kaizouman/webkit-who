@@ -60,6 +60,11 @@ for date, author, topics in webkit.parse_log(since,until):
                 keywords[canon_topic][1][company] = keywords[canon_topic][1].get(company,0) +1
                 companies[company][1][canon_topic] = companies[company][1].get(canon_topic,0) +1
                 canon_topics.append(canon_topic)
+    else:
+        if 'unknown' in keywords:
+            keywords['unknown'][0] +=1
+        else:
+            keywords['unknown'] = [1,{}]
 
 end = current_date
 # Don't miss the last date
