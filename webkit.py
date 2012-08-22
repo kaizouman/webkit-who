@@ -12,6 +12,8 @@ def parse_log(since='2 years ago',until='today'):
     |since| is an argument for the --since flag to git log.
     """
 
+    blank_re = re.compile("^\s*$")
+            
     commit_re = re.compile('^commit (\w+)')
     committer_re = re.compile('^Author: .*<([^@]+@[^@]+).*>')
     date_re = re.compile('^Date:\s+(\S+)')
@@ -19,14 +21,22 @@ def parse_log(since='2 years ago',until='today'):
     # Regexp for a ChangeLog header: date + author name + author email.
     changelog_re = re.compile('^    \d\d\d\d-\d\d-\d\d  .+?  <(.+?)>')
     # Regexp for a Reviewed By message
-    reviewed_re = re.compile('^\s+(?:Reviewed|Rubber-stamped|Rubber stamped|Suggested)\sby\s+([\w\s]+)')
+    reviewed_re = re.compile('^\s+(?:(?:Reviewed|Rubber-stamped|Rubber stamped|Rubberstamped|Suggested)\sby\s+([\w\s]+)|(Unreviewed)\.)',re.IGNORECASE)
     # Regexp for a in-ChangeLog commit message.
     patch_re = re.compile('^    Patch by .+? <([^@]+@[^@]+).*> on \d\d\d\d-\d\d-\d\d')
     
-    # Regexp for tags inserted as change headers in the patch details
-    tags_d_re = re.compile('^\s+(?:\.\./)*(?:Source/)?(?:WebKit/)?(?:platform/)?(?:ThirdParty/)?([\w/]+)\:(?![/\:])')
+    # Regexp to identify single rdar:: lines
+    rdar_re = re.compile("^\s+<rdar\://[\w/]+>\s*$")
+    
+    # Regexp to identify single show_bug.cgi lines
+    show_bug_re = re.compile("^\s+https\://bugs\.webkit\.org\/show_bug\.cgi\?id\=[\d]+\s*$")
+    
+    # Regexp for description headers
+    headers_re = re.compile('^\s+(?:\.\./)*(?:Volumes/Data/git/WebKit/OpenSource)?(?:Source/)?(?:WebKit/)?(?:platform/)?(?:ThirdParty/)?([\w]+)/?\:$')
+
     # Regexp for platform specific modified files
-    platform_re = re.compile('^\s+\*\s(?:platform|plugins|history|editing|bridge|accessibility)/(?:graphics/)?(?:network/)?(mac|qt|gtk|chromium|wx|win|wince|efl|blackberry)/')
+    #platform_re = re.compile('^\s+\*\s(?:platform|plugins|history|editing|bridge|accessibility)/(?:graphics/)?(?:network/)?(\w+)/')
+    filepath_re = re.compile('^\s+\*\s((?:[\w]+/)*)(\w+)\.(\w+)')
     
     # Regexp for the end of commit
     end_re = re.compile('^\s+git-svn-id')
@@ -37,22 +47,21 @@ def parse_log(since='2 years ago',until='today'):
     # We can have one of the two following log templates:
     # A - Git Header, Changelog, (Reviewed by|Subject), Description, Files
     # B - Git Header Subject, Reviewed by, Description, Files
-    # (where Git header is commit/committer/date) 
-    Templates = enum(UNKNOWN=0,A=1,B=2)
+    # (where Git header is commit/committer/date)
     
     insubject = False
     for line in log.stdout.xreadlines():
         # We skip blank lines and use them to separate blocks
-        if re.match("^\s*$",line):
+        if blank_re.match(line):
             if insubject:
-                # Parse the subject for relevant topics
-                topics = unambiguous_tags_re.findall(subject)
-                if not topics:
-                    topics = ambiguous_tags_re.findall(subject)
-                    if not topics: 
-						if build_fix_re.match(subject):
-							topics = ['build fix']
+				topics = identify_keywords(subject)
             insubject = False
+            continue
+        # We also skip single rdar:: lines
+        if rdar_re.match(line):
+            continue
+        # And single show_bug.cgi lines
+        if show_bug_re.match(line):
             continue
         # End of commit
         match = end_re.match(line)
@@ -61,21 +70,20 @@ def parse_log(since='2 years ago',until='today'):
                 author = committer
             if ' and ' in author:
                 author = author[0:author.find(' and ')]
-                if topics:
-                    # Convert to lower case and remove duplicates
-                    d = {}
-                    for x in topics:
-                        d[x.lower()] = 1
-                    topics = list(d.keys())
+            if topics:
+                # Convert to lower case and remove duplicates
+                d = {}
+                for x in topics:
+                    d[x.lower()] = 1
+                topics = list(d.keys())
             #if not topics:
-            #    print subject
-            yield date, author, topics          
+            #   print subject
+            yield date, author, topics        
             continue   
         # Start of commit 
         match = commit_re.match(line)
         if match: 
             commit = match.group(1)
-            template = Templates.UNKNOWN
             committer = None
             date = None
             author = None
@@ -109,33 +117,101 @@ def parse_log(since='2 years ago',until='today'):
             match = re.match("^(.*)$",line)
             subject = subject + match.group(1)
             continue
-        # If we went this far we have reached the description
         match = patch_re.match(line)
         if match:
             author = match.group(1)
             continue
-        match = tags_d_re.match(line)
-        if match:
-            if topics == None:
-                topics = []
-            topic = match.group(1)
-            topics.append(match.group(1))
+        # If we went this far we should have identified the commit
+        # subject and isolated topics
+        if topics:
             continue
-        match = platform_re.match(line)
+        # If not, parse the description for headers
+        match = headers_re.match(line)
         if match:
-            if topics == None:
-                topics = []
-            topic = match.group(1)
-            if topics.count(topic) == 0:
-                topics.append(topic)
+            topic = match.group(1).lower()
+            if topic in canon_topic_map:
+                if topics == None:
+                    topics = []
+                topics.append(match.group(1))
+            continue
+        # And parse the modified files
+        match = filepath_re.match(line)
+        if match:
+            topic_found = False
+            directories = match.group(1)
+            filename = match.group(2)
+            extension = match.group(3)
+            if filename:
+                patterns = identify_keywords(filename)
+                if patterns:
+                    topic_found = True
+                    if topics == None:
+                        topics = []
+                    topics.extend(patterns)
+            if topic_found:
+                continue        
+            if directories:
+                directories = re.split("/",match.group(1))
+                directories.reverse()
+                for directory in directories:
+                    topic = directory.lower()
+                    if topic in canon_topic_map:
+                        if topics == None:
+                            topics = []
+                        topic_found = True
+                        topics.append(topic)
+                        break
+            if not topic_found:
+                if extension in mac_extensions:
+                    topics.append("mac")
+                    topic_found = True
+                elif extension in qt_extensions:
+                    topics.append("qt")
+                    topic_found = True
+                elif extension in gtk_extensions:
+                    topics.append("gtk")
+                    topic_found = True
+                elif extension in gnu_extensions:
+                    topics.append("autotools")
+                    topic_found = True
+                elif extension in chromium_extensions:
+                    topics.append("chromium")
+                    topic_found = True
+                elif extension in source_extensions:
+                    for directory in directories:
+                        if directory in webcore_directories:
+                            if topics == None:
+                                topics = []
+                            topic_found = True
+                            topics.append("webcore")
+                            break
+                        elif directory in javascriptcore_directories:
+                            if topics == None:
+                                topics = []
+                            topic_found = True
+                            topics.append("javascriptcore")
+                            break                          
+            #if not topics and not topic_found:
+            #    print "Not found" + line
             continue       
 
-def parse_subject(subject=''):
+def identify_keywords(text=''):
            
-    # Regexp to identify unambiguous topic names
-    tags_re = re.compile(topics_re_str,re.IGNORECASE)
-
-    return unambiguous_tags_re.findall(subject)
+    # Identify keywords in a text
+    
+    # We first look for our "unambiguous" keywords
+    keywords = unambiguous_tags_re.findall(text)
+                
+    # Then try the "ambiguous" ones
+    if not keywords:
+		keywords = ambiguous_tags_re.findall(text)
+              
+    # Then try to identify build fixes      
+    if not keywords: 
+        if build_fix_re.match(text):
+            keywords = ['build fix']
+                            
+    return keywords
 
 # See:  http://trac.webkit.org/wiki/WebKit%20Team
 
@@ -408,59 +484,141 @@ def classify_email(email):
 
     return 'unknown'
 
-
 topic_sets = [
     ['mac', 'safari', 'leopard', 'lion'],
-    ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome', 'skia', 'angle', 'v8'],
-    ['gtk', 'gtk2', 'cairo', 'soup', 'gstreamer'],
+    ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome', 'skia', 'angle', 'v8', 'gyp'],
+    ['gtk', 'gtk2', 'cairo', 'soup', 'gstreamer', 'gdk'],
     ['qt', 'qtwebkit'],
     ['win', 'wince', 'windows', 'wincairo'],
-    ['jsc', 'javascriptcore'],
-    ['tools', 'webkittools' ],
+    ['jsc', 'javascriptcore', 'yarr', 'dfg', 'kjs'],
+    ['tools', 'webkittools', 'garden-o-matic', 'webkit-patch', 'build-webkit', 'webkitpy', 'dumprendertree', 'ews', 'layouttestcontroller', 'testrunner', "scripts", "webkittestrunner", "buildslavesupport" ],
     ['tests', 'test', 'layouttest', 'layouttests' , 'performancetests' ],
-    ['wk2', 'webkit2'],
+    ['wk2', 'webkit2', 'uiprocess', 'webprocess', 'pluginprocess'],
     ['wx'],
-    ['efl'],
+    ['efl', 'ewk'],
+    ['cg'],
+    ['qnx'],
+    ['ax'],
     ['regression'],
     ['blackberry'],
     ['webcore'],
-    ['texmap', 'texturemapper'],
-    ['webinspector', 'web inspector'],
+    ['webkit'],
+    ['wtf'],
+    ['texmap', 'texturemapper', 'texmapgl'],
+    ['webgl'],
+    ['webinspector', 'web inspector', 'inspector', 'drosera'],
     ['css', 'css2', 'css3' ],
+    ['wml'],
+    ['svg'],
+    ['autotools', 'gnumake'],
     ['cmake'],
     ['nrwt'],
+    ['openvg'],
     ['indexeddb'],
-    ['maintenance', 'rolled deps', 'rolling out', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations' , 'build fix', 'bump', 'versioning', 'changelog']
+    ['websocket'],
+    ['file api', 'filesystem api'],
+    ['forms'],
+    ['webaudio'],
+    ['brewmp'],
+    ['maintenance', 'deps', 'rolling out', 'roll out', 'rollout', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations' , 'build fix', 'buildfix', 'bump', 'versioning', 'changelog', 'typo', 'git', 'svn', 'subversion'],
+    ['webkit team', 'committers', 'contributors', 'contributor'],
+    ['webkitsite'],
+    ['plugins']
 ]
 
-# Prepare a regexp to identify non ambiguous topic names
-topics_re_str =""
+mac_extensions =  ["mm","xcodeproj", "vcproj", "xconfig"]
+qt_extensions = [ "pro", "pri" ]
+gtk_extensions = [ "po" ]
+chromium_extensions = [ "gyp" ]
+source_extensions = [ "cpp", "h", "idl", "rb", "asm"]
+gnu_extensions = [ 'ac', 'am', 'in' ]
+
+webcore_directories = [ 
+    "accessibility", 
+    "css",
+    "fileapi",
+    "icu",
+    "Modules",
+    "rendering",
+    "testing",
+    "workers",
+    "bindings",
+    "dom",
+    "ForwardingHeaders",
+    "inspector",
+    "page",
+    "Resources",
+    "xml",
+    "bridge",
+    "editing",
+    "history",
+    "loader",
+    "platform",
+    "storage",
+    "html",
+    "mathml",
+    "plugins",
+    "svg"
+]
+
+javascriptcore_directories = [
+    "API",
+    "bytecode",
+    "dfg",
+    "heap",
+    "interpreter",
+    "jit",
+    "offlineasm",
+    "parser",
+    "runtime",
+    "yarr",
+    "assembler",
+    "bytecompiler",
+    "debugger",
+    "disassembler",
+    "ForwardingHeaders",
+    "icu",
+    "os-win32",
+    "profiler",
+    "shell",
+    "tools",
+    "llint"
+]
+
+ambiguous_topics = ["webkit","mac","win","windows","test"]
+
+# Prepare regexp(s) to identify topic names
+unambiguous_topics_re_str =""
+ambiguous_topics_re_str=""
 
 # Gather topic names
 for topics in topic_sets:
     for topic in topics:
-        # Some tags are too ambiguous
-        if topic not in ["mac","windows"]:
-            if topics_re_str == "":
-                topics_re_str = "[\[\s/](" + topic
+        if topic in ambiguous_topics:
+            if ambiguous_topics_re_str == "":
+                ambiguous_topics_re_str = "\W(" + topic
             else:
-                topics_re_str = topics_re_str + "|" + topic
-if topics_re_str != "":
-    topics_re_str = topics_re_str + ")[\]\s\.\:,\(/\+]"
+                ambiguous_topics_re_str = ambiguous_topics_re_str + "|" + topic
+        else:
+            if unambiguous_topics_re_str == "":
+                unambiguous_topics_re_str = "(" + topic
+            else:
+                unambiguous_topics_re_str = unambiguous_topics_re_str + "|" + topic
 
-# Regexp to identify unambiguous topic names
-unambiguous_tags_re = re.compile(topics_re_str,re.IGNORECASE)
-
-# Regexp to identify ambiguous topic names
-ambiguous_tags_re = re.compile("[\[\s/](mac|windows)[\]\s\.\:,\(/]",re.IGNORECASE)
+if unambiguous_topics_re_str != "":
+    unambiguous_topics_re_str = unambiguous_topics_re_str + ")"
+if ambiguous_topics_re_str != "":
+    ambiguous_topics_re_str = ambiguous_topics_re_str + ")\W"
+    
+unambiguous_tags_re = re.compile(unambiguous_topics_re_str,re.IGNORECASE)
+ambiguous_tags_re = re.compile(ambiguous_topics_re_str,re.IGNORECASE)
 
 # Regexp to identify build fixes
-build_fix_re = re.compile("^.*(fix.*(build|compilation))|((build|compilation).*fix)",re.IGNORECASE)
-#build_fix_re = re.compile("^.*(fix)",re.IGNORECASE)
+build_fix_re = re.compile("^.*((fix.*(build|compilation|warning))|((build|compilation|warning).*fix))",re.IGNORECASE)
         
 canon_topic_map = {}
 for topics in topic_sets:
-    for topic in topics[1:]:
+    for topic in topics:
         canon_topic_map[topic] = topics[0]
 
 def canonicalize_topic(topic):
