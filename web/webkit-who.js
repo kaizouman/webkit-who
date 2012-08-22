@@ -69,64 +69,86 @@ function get_keywords_count(data){
   return keywords;
 }
 
-function build_graph_from_file(url){
-  xhr = new XMLHttpRequest()  
-  xhr.onreadystatechange = function()
-   { 
-     if(xhr.readyState == 4)
-     {
-        if(xhr.status == 200)
-        { 
-             data = JSON.parse(xhr.responseText); 
-             companies = get_keywords_count(data);
-             // Retain only the first 10 contributing companies
-             filters = [];
-             labels = ['Date'];
-             for(var i=0;(i<companies.length && i<10);i++){
-                 filters.push(companies[i][0]);
-                 labels.push(companies[i][0]);             
-             }
-             // Aggregate the others
-             aggregated = [];
-             for(var i=10;i<companies.length;i++){
-                 aggregated.push(companies[i][0]);
-             }
-             filters.push(aggregated);
-             labels.push('Other');             
-             daily =get_daily_commits_filtered(data,filters,false);             
-              g = new Dygraph(
-                document.getElementById("graphdiv"),
-                daily,
-                { labels: labels,
-                    rollPeriod: 90,
-                showRoller: true 
-                }
-              );
-              dp = document.getElementById("displaybar");
-              for(i=1;i<labels.length;i++){
-                cb = document.createElement('input');
-                cb.id = i-1;
-                cb.type = "checkbox";
-                cb.addEventListener("click",
-                                    function(){
-                                        g.setVisibility(this.id,this.checked);
-                                    },
-                                    false);
-                cb.checked = true;
-                dp.appendChild(cb);
-                lb = document.createElement('label');
-                lb.for = i-1;
-                lb.innerHTML = ' ' + labels[i];
-                dp.appendChild(lb);
-              }
-        } 
-       else 
-        { 
-           alert("Error: returned status code " + xhr.status + " " + xhr.statusText); 
-       } 
-    } 
- }; 
+function build_graph_from_data(data){
+    companies = get_keywords_count(data);
+    // Retain only the first 10 contributing companies
+    filters = [];
+    labels = ['Date'];
+    for(var i=0;(i<companies.length && i<10);i++){
+     filters.push(companies[i][0]);
+     labels.push(companies[i][0]);             
+    }
+    // Aggregate the others
+    aggregated = [];
+    for(var i=10;i<companies.length;i++){
+     aggregated.push(companies[i][0]);
+    }
+    filters.push(aggregated);
+    labels.push('Other');             
+    daily =get_daily_commits_filtered(data,filters,false);             
+    g = new Dygraph(
+    document.getElementById("graphdiv"),
+    daily,
+    { labels: labels,
+        rollPeriod: 90,
+    showRoller: true 
+    }
+    );
+    dp = document.getElementById("displaybar");
+    for(i=1;i<labels.length;i++){
+        cb = document.createElement('input');
+        cb.id = i-1;
+        cb.type = "checkbox";
+        cb.addEventListener("click",
+                            function(){
+                                g.setVisibility(this.id,this.checked);
+                            },
+                            false);
+        cb.checked = true;
+        dp.appendChild(cb);
+        lb = document.createElement('label');
+        lb.for = i-1;
+        lb.innerHTML = ' ' + labels[i];
+        dp.appendChild(lb);
+    }
+}
 
- xhr.open("GET", url, true);                
- xhr.send(null); 
+// Build a webkit commit graph
+// from: year (>2001)
+// to: year
+// filter: feature/company
+function build_graph(from,to,filter){
+
+    data = [];
+    year = from;
+
+    fetch_next_dataset = function(){
+      xhr = new XMLHttpRequest()  
+      xhr.onreadystatechange = function()
+       { 
+         if(xhr.readyState == 4)
+         {
+            if(xhr.status == 200)
+            { 
+                 dataset = JSON.parse(xhr.responseText);
+                 data = data.concat(dataset);
+                 year++;
+                 if(year<=to){
+                     fetch_next_dataset();
+                 }else{
+                     build_graph_from_data(data);
+                 }
+            } 
+           else 
+            { 
+               alert("Error: returned status code " + xhr.status + " " + xhr.statusText); 
+           } 
+        } 
+     }; 
+
+     xhr.open("GET", year + '-by-' + filter + '.json', true);                
+     xhr.send(null); 
+    }
+    
+    fetch_next_dataset();
 }
