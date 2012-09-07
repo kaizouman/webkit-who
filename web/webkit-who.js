@@ -69,32 +69,44 @@ function get_keywords_count(data){
   return keywords;
 }
 
-function build_graph_from_data(data){
-    companies = get_keywords_count(data);
-    // Retain only the first 10 contributing companies
+function build_graph_from_data(container,data){
+    // Get graph div (we _need_ to have it styled from the markup if
+    // we don't want dygraph to select the default width/height
+    var graphDiv = document.createElement("div");
+    var width = window.getComputedStyle(container).width;
+    graphDiv.style.width = width;
+    var targetHeight = Math.floor(width.substring(0, width.length - 2)*.6);
+    var maxHeight = Math.floor(window.innerHeight*.6);
+    graphDiv.style.height = Math.min(targetHeight,maxHeight)+'px';
+    container.appendChild(graphDiv);
+    // Count keywords
+    keywords = get_keywords_count(data);
+    // Retain only the first 10 contributing keywords
     filters = [];
     labels = ['Date'];
-    for(var i=0;(i<companies.length && i<10);i++){
-     filters.push(companies[i][0]);
-     labels.push(companies[i][0]);             
+    for(var i=0;(i<keywords.length && i<10);i++){
+     filters.push(keywords[i][0]);
+     labels.push(keywords[i][0]);             
     }
     // Aggregate the others
     aggregated = [];
-    for(var i=10;i<companies.length;i++){
-     aggregated.push(companies[i][0]);
+    for(var i=10;i<keywords.length;i++){
+     aggregated.push(keywords[i][0]);
     }
     filters.push(aggregated);
     labels.push('Other');             
     daily =get_daily_commits_filtered(data,filters,false);             
     g = new Dygraph(
-    document.getElementById("graphdiv"),
+    graphDiv,
     daily,
     { labels: labels,
         rollPeriod: 90,
     showRoller: true 
     }
     );
-    dp = document.getElementById("displaybar");
+    // Create display bar to filter out sequences
+    var dp = document.createElement("p");
+    dp.innerHTML = "Display:";
     for(i=1;i<labels.length;i++){
         cb = document.createElement('input');
         cb.id = i-1;
@@ -111,13 +123,15 @@ function build_graph_from_data(data){
         lb.innerHTML = ' ' + labels[i];
         dp.appendChild(lb);
     }
+    container.appendChild(dp);
 }
 
 // Build a webkit commit graph
+// container: containing DOM element
 // from: year (>2001)
 // to: year
 // filter: feature/company
-function build_graph(from,to,filter){
+function build_graph(container,from,to,filter){
 
     data = [];
     year = from;
@@ -136,7 +150,7 @@ function build_graph(from,to,filter){
                  if(year<=to){
                      fetch_next_dataset();
                  }else{
-                     build_graph_from_data(data);
+                     build_graph_from_data(container,data);
                  }
             } 
            else 
@@ -146,9 +160,85 @@ function build_graph(from,to,filter){
         } 
      }; 
 
-     xhr.open("GET", year + '-by-' + filter + '.json', true);                
+     xhr.open("GET", '/webkit-who/' + year + '-by-' + filter + '.json', true);                
      xhr.send(null); 
     }
     
     fetch_next_dataset();
 }
+
+function init(){
+    var container = document.getElementById("container");
+    if(container){
+        // Create inputs to select time range
+        var tr = document.createElement("p");
+        tr.appendChild(document.createTextNode("WebKit Commits between "));
+        var from = document.createElement("input");
+        from.type = "number";
+        from.min = 2001;
+        from.max = new Date().getFullYear();
+        from.step = 1;
+        from.value = from.max -1;
+        tr.appendChild(from);
+        tr.appendChild(document.createTextNode(" and "));
+        var to = document.createElement("input");
+        to.type = "number";
+        to.min = 2001;
+        to.max = from.max;
+        to.step = 1;
+        to.value = to.max;
+        tr.appendChild(to);
+        tr.appendChild(document.createTextNode(" split by "));
+        var select = document.createElement("select");
+        var filters = ['company','keyword'];
+        for(var filter in filters){
+            var option = document.createElement("option");
+            option.appendChild(document.createTextNode(filters[filter]));
+            select.appendChild(option);
+        }
+        tr.appendChild(select);
+        var bt = document.createElement("input");
+        bt.type = "submit";
+        bt.value = "Refresh";
+        bt.onclick = function(){
+            for(var i=0;i<2;i++) container.removeChild(tr.nextSibling);
+            build_graph(container,from.value,to.value,select.value);            
+        };
+        tr.appendChild(bt);
+        container.appendChild(tr);
+        //container.insertBefore(tr,document.getElementById("graphDiv"));
+        build_graph(container,from.value,to.value,select.value);
+    }
+}
+
+function GetFloatValueOfAttr (element,attr) {
+    var floatValue = null;
+    if (window.getComputedStyle) {
+        var compStyle = window.getComputedStyle (element, null);
+        try {
+            var value = compStyle.getPropertyCSSValue (attr);
+            var valueType = value.primitiveType;
+            switch (valueType) {
+              case CSSPrimitiveValue.CSS_NUMBER:
+                  floatValue = value.getFloatValue (CSSPrimitiveValue.CSS_NUMBER);
+                  break;
+              case CSSPrimitiveValue.CSS_PERCENTAGE:
+                  floatValue = value.getFloatValue (CSSPrimitiveValue.CSS_PERCENTAGE);
+                  break;
+              default:
+                  if (CSSPrimitiveValue.CSS_EMS <= valueType && valueType <= CSSPrimitiveValue.CSS_DIMENSION) {
+                      floatValue = value.getFloatValue (CSSPrimitiveValue.CSS_PX);
+                  }
+            }
+        } 
+        catch (e) {
+          // Opera doesn't support the getPropertyCSSValue method
+          stringValue = compStyle[attr];
+          floatValue = stringValue.substring(0, stringValue.length - 2);
+        }
+    }
+    return floatValue;
+}
+
+window.addEventListener("load",init,false);
+
