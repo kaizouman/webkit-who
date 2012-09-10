@@ -54,7 +54,7 @@ def parse_log(since='2 years ago',until='today'):
         # We skip blank lines and use them to separate blocks
         if blank_re.match(line):
             if insubject:
-				topics = identify_keywords(subject)
+                topics = identify_keywords(subject)
             insubject = False
             continue
         # We also skip single rdar:: lines
@@ -198,13 +198,17 @@ def parse_log(since='2 years ago',until='today'):
 def identify_keywords(text=''):
            
     # Identify keywords in a text
+
+    # We first look for declarative keywords (enclosed in brackets)
+    keywords = declarative_tags_re.findall(text)
     
-    # We first look for our "unambiguous" keywords
-    keywords = unambiguous_tags_re.findall(text)
+    # Then look for our "unambiguous" keywords in plain text
+    if not keywords:
+        keywords = unambiguous_tags_re.findall(text)
                 
     # Then try the "ambiguous" ones
     if not keywords:
-		keywords = ambiguous_tags_re.findall(text)
+        keywords = ambiguous_tags_re.findall(text)
               
     # Then try to identify build fixes      
     if not keywords: 
@@ -491,7 +495,7 @@ topic_sets = [
     ['qt', 'qtwebkit'],
     ['win', 'wince', 'windows', 'wincairo'],
     ['jsc', 'javascriptcore', 'yarr', 'dfg', 'kjs'],
-    ['tools', 'webkittools', 'garden-o-matic', 'webkit-patch', 'build-webkit', 'webkitpy', 'dumprendertree', 'ews', 'layouttestcontroller', 'testrunner', "scripts", "webkittestrunner", "buildslavesupport" ],
+    ['tools', 'webkittools', 'garden-o-matic', 'webkit-patch', 'build-webkit', 'webkitpy', 'dumprendertree', 'drt','wtr','ews', 'layouttestcontroller', 'testrunner', "scripts", "webkittestrunner", "buildslavesupport" ],
     ['tests', 'test', 'layouttest', 'layouttests' , 'performancetests' ],
     ['wk2', 'webkit2', 'uiprocess', 'webprocess', 'pluginprocess'],
     ['wx'],
@@ -612,6 +616,7 @@ if ambiguous_topics_re_str != "":
     
 unambiguous_tags_re = re.compile(unambiguous_topics_re_str,re.IGNORECASE)
 ambiguous_tags_re = re.compile(ambiguous_topics_re_str,re.IGNORECASE)
+declarative_tags_re = re.compile("\[([a-zA-Z]\w+)\]",re.IGNORECASE);
 
 # Regexp to identify build fixes
 build_fix_re = re.compile("^.*((fix.*(build|compilation|warning))|((build|compilation|warning).*fix))",re.IGNORECASE)
@@ -625,6 +630,7 @@ def canonicalize_topic(topic):
     """Return a generic topic for close devts"""
     if topic in canon_topic_map:
         return canon_topic_map[topic]
+    print "Unidentified commit tag:" + topic
     return topic
 
 def enum(**enums):
