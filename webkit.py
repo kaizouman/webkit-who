@@ -589,15 +589,15 @@ community_sets = [
 ]
 
 tag_sets = [
-    ports_sets,
-    backends_sets,
-    modules_sets,
-    features_sets,
-    tests_sets,
-    buildsystems_sets,
-    tools_sets,
-    maintenance_sets,
-    community_sets
+    ['ports',ports_sets],
+    ['backends',backends_sets],
+    ['modules',modules_sets],
+    ['features',features_sets],
+    ['tests',tests_sets],
+    ['buildsystems',buildsystems_sets],
+    ['tools',tools_sets],
+    ['maintenance',maintenance_sets],
+    ['community',community_sets]
 ]
 
 mac_extensions =  ["mm","xcodeproj", "vcproj", "xconfig"]
@@ -667,7 +667,7 @@ ambiguous_topics_re_str=""
 
 # Gather tags to build a regexp
 for tag_subsets in tag_sets:
-    for tags in tag_subsets:
+    for tags in tag_subsets[1]:
         for tag in tags:
             if tag in ambiguous_topics:
                 if ambiguous_topics_re_str == "":
@@ -694,15 +694,21 @@ build_fix_re = re.compile("^.*((fix.*(build|compilation|warning))|((build|compil
         
 canon_topic_map = {}
 for tag_subsets in tag_sets:
-    for tags in tag_subsets:
+    for tags in tag_subsets[1]:
         for tag in tags:
-            canon_topic_map[tag] = tags[0]
+            # Store canonical tag name and type
+            canon_topic_map[tag] = [tags[0],tag_subsets[1]]
+
+# Returns the canonical name for a given tag and its type
+def canonicalize_tag(tag):
+    if tag in canon_topic_map:
+        return canon_topic_map[tag]
+    return [tag,"unknown"]
 
 def canonicalize_topic(topic):
     """Return a generic topic for close devts"""
     if topic in canon_topic_map:
-        return canon_topic_map[topic]
-    print "Unidentified commit tag:" + topic
+        return canon_topic_map[topic][0]
     return topic
 
 def enum(**enums):
