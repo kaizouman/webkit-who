@@ -488,46 +488,116 @@ def classify_email(email):
 
     return 'unknown'
 
-topic_sets = [
+ports_sets = [
     ['mac', 'safari', 'leopard', 'lion'],
-    ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome', 'skia', 'angle', 'v8', 'gyp'],
-    ['gtk', 'gtk2', 'cairo', 'soup', 'gstreamer', 'gdk'],
+    ['chromium', 'chromium-mac', 'chromium-android', 'chromium-win', 'chrome'],
+    ['gtk', 'gtk2','gdk'],
     ['qt', 'qtwebkit'],
-    ['win', 'wince', 'windows', 'wincairo'],
-    ['jsc', 'javascriptcore', 'yarr', 'dfg', 'kjs'],
-    ['tools', 'webkittools', 'garden-o-matic', 'webkit-patch', 'build-webkit', 'webkitpy', 'dumprendertree', 'drt','wtr','ews', 'layouttestcontroller', 'testrunner', "scripts", "webkittestrunner", "buildslavesupport" ],
-    ['tests', 'test', 'layouttest', 'layouttests' , 'performancetests' ],
-    ['wk2', 'webkit2', 'uiprocess', 'webprocess', 'pluginprocess'],
+    ['blackberry'],
+    ['win', 'wince', 'windows'],
     ['wx'],
     ['efl', 'ewk'],
-    ['cg'],
+    ['cg']
+]
+
+backends_sets = [
+    ['skia'],
+    ['angle'],
+    ['cairo','wincairo'],
+    ['soup','libsoup'],
+    ['gstreamer'],
+    ['curl'],
+    ['openvg'],
     ['qnx'],
-    ['ax'],
-    ['regression'],
-    ['blackberry'],
+    ['ax']
+]
+
+modules_sets = [
+    ['v8'],
+    ['jsc', 'javascriptcore', 'yarr', 'dfg', 'kjs'],
+    ['wk2', 'webkit2', 'uiprocess', 'webprocess', 'pluginprocess'],
     ['webcore'],
     ['webkit'],
     ['wtf'],
+    ['webinspector', 'web inspector', 'inspector', 'drosera']
+]
+
+features_sets = [
     ['texmap', 'texturemapper', 'texmapgl'],
     ['webgl'],
-    ['webinspector', 'web inspector', 'inspector', 'drosera'],
     ['css', 'css2', 'css3' ],
     ['wml'],
     ['svg'],
-    ['autotools', 'gnumake'],
-    ['cmake'],
-    ['nrwt'],
-    ['openvg'],
     ['indexeddb'],
     ['websocket'],
     ['file api', 'filesystem api'],
     ['forms'],
     ['webaudio'],
-    ['brewmp'],
-    ['maintenance', 'deps', 'rolling out', 'roll out', 'rollout', 'refactoring', 'rebaseline', 'gardening' , 'expectations' , 'testexpectations' , 'build fix', 'buildfix', 'bump', 'versioning', 'changelog', 'typo', 'git', 'svn', 'subversion'],
-    ['webkit team', 'committers', 'contributors', 'contributor'],
-    ['webkitsite'],
     ['plugins']
+]
+
+tests_sets = [
+    ['tests', 'test'],
+    ['layouttests', 'layouttest'],
+    ['performancetests']
+]
+
+buildsystems_sets = [
+    ['gyp'],
+    ['autotools', 'gnumake'],
+    ['cmake'],
+    ['brewmp'],
+    ['xcode']
+]
+
+tools_sets = [
+    ['tools', 'webkittools'],
+    ['garden-o-matic'],
+    ['webkit-patch'],
+    ['build-webkit'],
+    ['webkitpy'], 
+    ['dumprendertree', 'drt'],
+    ['ews'],
+    ['layouttestcontroller'],
+    ['testrunner'],
+    ['scripts'], 
+    ["webkittestrunner", "wtr","wktr"],
+    ["buildslavesupport" ],
+    ['nrwt']
+]
+
+maintenance_sets = [
+    ['maintenance'],
+    ['regression'],
+    ['deps'],
+    ['rolling out', 'roll out', 'rollout'], 
+    ['refactoring'], 
+    ['rebaseline'],
+    ['gardening','expectations' ,'testexpectations'],
+    ['build fix', 'buildfix'],
+    ['bump'],
+    ['versioning'],
+    ['changelog'],
+    ['typo'],
+    ['git'],
+    ['svn', 'subversion']
+]
+
+community_sets = [
+    ['webkit team', 'committers', 'contributors', 'contributor'],
+    ['webkitsite']
+]
+
+tag_sets = [
+    ports_sets,
+    backends_sets,
+    modules_sets,
+    features_sets,
+    tests_sets,
+    buildsystems_sets,
+    tools_sets,
+    maintenance_sets,
+    community_sets
 ]
 
 mac_extensions =  ["mm","xcodeproj", "vcproj", "xconfig"]
@@ -595,19 +665,20 @@ ambiguous_topics = ["webkit","mac","win","windows","test"]
 unambiguous_topics_re_str =""
 ambiguous_topics_re_str=""
 
-# Gather topic names
-for topics in topic_sets:
-    for topic in topics:
-        if topic in ambiguous_topics:
-            if ambiguous_topics_re_str == "":
-                ambiguous_topics_re_str = "\W(" + topic
+# Gather tags to build a regexp
+for tag_subsets in tag_sets:
+    for tags in tag_subsets:
+        for tag in tags:
+            if tag in ambiguous_topics:
+                if ambiguous_topics_re_str == "":
+                    ambiguous_topics_re_str = "\W(" + tag
+                else:
+                    ambiguous_topics_re_str = ambiguous_topics_re_str + "|" + tag
             else:
-                ambiguous_topics_re_str = ambiguous_topics_re_str + "|" + topic
-        else:
-            if unambiguous_topics_re_str == "":
-                unambiguous_topics_re_str = "(" + topic
-            else:
-                unambiguous_topics_re_str = unambiguous_topics_re_str + "|" + topic
+                if unambiguous_topics_re_str == "":
+                    unambiguous_topics_re_str = "(" + tag
+                else:
+                    unambiguous_topics_re_str = unambiguous_topics_re_str + "|" + tag
 
 if unambiguous_topics_re_str != "":
     unambiguous_topics_re_str = unambiguous_topics_re_str + ")"
@@ -622,9 +693,10 @@ declarative_tags_re = re.compile("\[([a-zA-Z]\w+)\]",re.IGNORECASE);
 build_fix_re = re.compile("^.*((fix.*(build|compilation|warning))|((build|compilation|warning).*fix))",re.IGNORECASE)
         
 canon_topic_map = {}
-for topics in topic_sets:
-    for topic in topics:
-        canon_topic_map[topic] = topics[0]
+for tag_subsets in tag_sets:
+    for tags in tag_subsets:
+        for tag in tags:
+            canon_topic_map[tag] = tags[0]
 
 def canonicalize_topic(topic):
     """Return a generic topic for close devts"""
