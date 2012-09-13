@@ -2,6 +2,7 @@
 
 import re
 import subprocess
+import operator
 
 def parse_log(since='2 years ago',until='today'):
     """Parse the commit log, yielding (date, author email) pairs.
@@ -588,16 +589,17 @@ community_sets = [
     ['webkitsite']
 ]
 
+# Tag sets identified by their name and priority
 tag_sets = [
-    ['ports',ports_sets],
-    ['backends',backends_sets],
-    ['modules',modules_sets],
-    ['features',features_sets],
-    ['tests',tests_sets],
-    ['buildsystems',buildsystems_sets],
-    ['tools',tools_sets],
-    ['maintenance',maintenance_sets],
-    ['community',community_sets]
+    ['ports',ports_sets,2],
+    ['backends',backends_sets,3],
+    ['modules',modules_sets,2],
+    ['features',features_sets,3],
+    ['tests',tests_sets,1],
+    ['buildsystems',buildsystems_sets,1],
+    ['tools',tools_sets,1],
+    ['maintenance',maintenance_sets,1],
+    ['community',community_sets,1]
 ]
 
 mac_extensions =  ["mm","xcodeproj", "vcproj", "xconfig"]
@@ -697,13 +699,13 @@ for tag_subsets in tag_sets:
     for tags in tag_subsets[1]:
         for tag in tags:
             # Store canonical tag name and type
-            canon_topic_map[tag] = [tags[0],tag_subsets[1]]
+            canon_topic_map[tag] = [tags[0],tag_subsets[0],tag_subsets[2]]
 
 # Returns the canonical name for a given tag and its type
 def canonicalize_tag(tag):
     if tag in canon_topic_map:
         return canon_topic_map[tag]
-    return [tag,"unknown"]
+    return [tag,"unknown",1]
 
 def canonicalize_topic(topic):
     """Return a generic topic for close devts"""

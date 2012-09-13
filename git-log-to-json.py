@@ -51,20 +51,32 @@ for date, author, topics in webkit.parse_log(since,until):
     canon_topics = []
     if topics:
         for topic in topics:
-            canon_topic = webkit.canonicalize_topic(topic.lower())
-            if canon_topic not in canon_topics:
-                if canon_topic in keywords:
-                    keywords[canon_topic][0] +=1
-                else:
-                    keywords[canon_topic] = [1,{}]
-                keywords[canon_topic][1][company] = keywords[canon_topic][1].get(company,0) +1
-                companies[company][1][canon_topic] = companies[company][1].get(canon_topic,0) +1
+            # TODO: filter out tags based on their type (canon_tag[1])
+            canon_topic = webkit.canonicalize_tag(topic.lower())
+            if canon_topic[0] not in canon_topics:
                 canon_topics.append(canon_topic)
     else:
-        if 'unknown' in keywords:
-            keywords['unknown'][0] +=1
+        if 'unknown' not in canon_topics:
+            canon_topics.append(['none','unknown',1])
+    # Sort canon topics by priority
+    canon_topics.sort(key=operator.itemgetter(2))
+    for canon_topic in canon_topics:
+        tag_name = canon_topic[0]        
+        tag_type = canon_topic[1]
+        if tag_type in keywords:
+            keywords[tag_type][0] +=1
         else:
-            keywords['unknown'] = [1,{}]
+            keywords[tag_type] = [1,{}]
+        if tag_name in keywords[tag_type][1]:
+            keywords[tag_type][1][tag_name][0] +=1
+        else:
+            keywords[tag_type][1][tag_name] = [1,{}]
+        keywords[tag_type][1][tag_name][1][company] = keywords[tag_type][1][tag_name][1].get(company,0) +1
+        if tag_type in companies[company][1]:
+            companies[company][1][tag_type][0] +=1
+        else:
+            companies[company][1][tag_type] = [1,{}]
+        companies[company][1][tag_type][1][tag_name] = companies[company][1][tag_type][1].get(tag_name,0) +1
 
 end = current_date
 # Don't miss the last date
