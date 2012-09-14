@@ -39,34 +39,48 @@ function get_daily_commits_filtered(data,filters,add_sum){
   return commits;
 }
 
-function get_tuple_for_keyword(arr, keyword) {
-    for(var i=0; i<arr.length; i++) {
-        if (arr[i][0] == keyword){
-            return arr[i];
+function get_tuple_for_tag(tags, tag) {
+    for(var i=0; i<tags.length; i++) {
+        if (tags[i][0] == tag){
+            return tags[i];
         }
     }
     return null;
 }
 
-// Return a sorted array of [keyword,counts] pairs
-// representing the total number of hits for each keyword in the dataset
-function get_keywords_count(data){
-  keywords = [];
+// Return a sorted array of [tag,counts,subtags] entries representing
+// all level-one tags identified in the dataset.
+// For each tag, we store:
+// - its name,
+// - the total number of hits
+// - the list of subtags (and their hits number)
+function get_tags_count(data){
+  var tags = [];
   for (var i=0;i<data.length;i++){
-    records = data[i][2];
-    for (var keyword in records){
-        keyword_count = records[keyword][0];
-        keyword_tuple = get_tuple_for_keyword(keywords,keyword);
-        if (keyword_tuple){
-            keyword_tuple[1] += keyword_count;
+    var records = data[i][2];
+    for (var tag in records){
+        var tag_count = records[tag][0];
+        var tag_tuple = get_tuple_for_tag(tags,tag);
+        if (tag_tuple){
+            tag_tuple[1] += tag_count;
         }else{
-            keywords.push([keyword,keyword_count]);
+            var i = tags.push([tag,tag_count,[]]);
+            tag_tuple = tags[i-1];
+        }
+        for (var subtag in records[tag][1]){
+            subtag_count = records[tag][1][subtag][0];
+            subtag_tuple = get_tuple_for_tag(tag_tuple[2],subtag);
+            if (subtag_tuple){
+                subtag_tuple[1] += subtag_count;
+            }else{
+                tag_tuple[2].push([subtag,subtag_count]);
+            }
         }
     }
   }
   // Sort array by counts
-  keywords.sort(function(a, b) { return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0 });
-  return keywords;
+  tags.sort(function(a, b) { return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0 });
+  return tags;
 }
 
 function build_graph_from_data(container,data){
@@ -80,13 +94,17 @@ function build_graph_from_data(container,data){
     graphDiv.style.height = Math.min(targetHeight,maxHeight)+'px';
     container.appendChild(graphDiv);
     // Count keywords
-    keywords = get_keywords_count(data);
+    keywords = get_tags_count(data);
     // Retain only the first 10 contributing keywords
     filters = [];
     labels = ['Date'];
     for(var i=0;(i<keywords.length && i<10);i++){
      filters.push(keywords[i][0]);
-     labels.push(keywords[i][0]);             
+     labels.push(keywords[i][0]); 
+     window.console.log(keywords[i][0] + ":");
+     for (var j=0;j<keywords[i][2].length;j++){
+         window.console.log(keywords[i][2][j][0] + ":" + keywords[i][2][j][1]);            
+     }
     }
     // Aggregate the others
     aggregated = [];
@@ -190,7 +208,7 @@ function init(){
         tr.appendChild(to);
         tr.appendChild(document.createTextNode(" split by "));
         var select = document.createElement("select");
-        var filters = ['company','keyword'];
+        var filters = ['keyword','company'];
         for(var filter in filters){
             var option = document.createElement("option");
             option.appendChild(document.createTextNode(filters[filter]));
