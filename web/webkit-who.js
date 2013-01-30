@@ -95,7 +95,7 @@ function build_graph_from_data(container,data){
     container.appendChild(graphDiv);
     // Count keywords
     keywords = get_tags_count(data);
-    // Retain only the first 10 contributing keywords
+    // Retain the first 10 contributing keywords as individual filters
     filters = [];
     labels = ['Date'];
     for(var i=0;(i<keywords.length && i<10);i++){
@@ -106,13 +106,14 @@ function build_graph_from_data(container,data){
          window.console.log(keywords[i][2][j][0] + ":" + keywords[i][2][j][1]);            
      }
     }
-    // Aggregate the others
+    // Aggregate the other keywords into a single filter
     aggregated = [];
     for(var i=10;i<keywords.length;i++){
      aggregated.push(keywords[i][0]);
     }
     filters.push(aggregated);
-    labels.push('Other');             
+    labels.push('Other');
+    // Get daily commits filtered             
     daily =get_daily_commits_filtered(data,filters,false);             
     g = new Dygraph(
     graphDiv,
@@ -178,7 +179,7 @@ function build_graph(container,from,to,filter){
         } 
      }; 
 
-     xhr.open("GET", '/webkit-who/' + year + '-by-' + filter + '.json', true);                
+     xhr.open("GET", './' + year + '-by-' + filter + '.json', true);                
      xhr.send(null); 
     }
     
