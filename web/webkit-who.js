@@ -83,7 +83,7 @@ function get_tags_count(data){
   return tags;
 }
 
-function build_graph_from_data(container,data){
+function build_graph_from_data(container,data,nbseries){
     // Get graph div (we _need_ to have it styled from the markup if
     // we don't want dygraph to select the default width/height
     var graphDiv = document.createElement("div");
@@ -95,10 +95,10 @@ function build_graph_from_data(container,data){
     container.appendChild(graphDiv);
     // Count keywords
     keywords = get_tags_count(data);
-    // Retain the first 10 contributing keywords as individual filters
+    // Retain the first nbseries contributing keywords as individual filters
     filters = [];
     labels = ['Date'];
-    for(var i=0;(i<keywords.length && i<10);i++){
+    for(var i=0;(i<keywords.length && i<nbseries);i++){
      filters.push(keywords[i][0]);
      labels.push(keywords[i][0]); 
      window.console.log(keywords[i][0] + ":");
@@ -108,7 +108,7 @@ function build_graph_from_data(container,data){
     }
     // Aggregate the other keywords into a single filter
     aggregated = [];
-    for(var i=10;i<keywords.length;i++){
+    for(var i=nbseries;i<keywords.length;i++){
      aggregated.push(keywords[i][0]);
     }
     filters.push(aggregated);
@@ -169,7 +169,7 @@ function build_graph(container,from,to,filter){
                  if(year<=to){
                      fetch_next_dataset();
                  }else{
-                     build_graph_from_data(container,data);
+                     build_graph_from_data(container,data,10);
                  }
             } 
            else 
