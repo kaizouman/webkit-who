@@ -100,11 +100,7 @@ function build_graph_from_data(container,data,nbseries){
     labels = ['Date'];
     for(var i=0;(i<keywords.length && i<nbseries);i++){
      filters.push(keywords[i][0]);
-     labels.push(keywords[i][0]); 
-     window.console.log(keywords[i][0] + ":");
-     for (var j=0;j<keywords[i][2].length;j++){
-         window.console.log(keywords[i][2][j][0] + ":" + keywords[i][2][j][1]);            
-     }
+     labels.push(keywords[i][0]);
     }
     // Aggregate the other keywords into a single filter
     aggregated = [];
@@ -225,7 +221,6 @@ function init(){
         };
         tr.appendChild(bt);
         container.appendChild(tr);
-        //container.insertBefore(tr,document.getElementById("graphDiv"));
         build_graph(container,from.value,to.value,select.value);
     }
 }
