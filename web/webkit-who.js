@@ -108,7 +108,7 @@ function get_tags_count(data){
   return tags;
 }
 
-function build_graph_from_data(container,data,nbseries){
+function create_graph_node(container) {
     // Get graph div (we _need_ to have it styled from the markup if
     // we don't want dygraph to select the default width/height
     var graphDiv = document.createElement("div");
@@ -118,6 +118,12 @@ function build_graph_from_data(container,data,nbseries){
     var maxHeight = Math.floor(window.innerHeight*.6);
     graphDiv.style.height = Math.min(targetHeight,maxHeight)+'px';
     container.appendChild(graphDiv);
+    return graphDiv;
+}
+
+function build_graph_from_data(container,data,nbseries){
+    // Create graph node
+    var graphDiv = create_graph_node(container);
     // Count keywords
     keywords = get_tags_count(data);
     // Retain the first nbseries contributing keywords as individual filters
