@@ -190,7 +190,10 @@ function build_graph(container,from,to,filter){
                  if(year<=to){
                      fetch_next_dataset();
                  }else{
-                     build_graph_from_data(container,data,10);
+                    var evt = document.createEvent("Event");
+                    evt.initEvent("datarefreshed",true,true); 
+                    evt.data = data;
+                    container.dispatchEvent(evt);
                  }
             } 
            else 
@@ -206,6 +209,10 @@ function build_graph(container,from,to,filter){
     
     fetch_next_dataset();
 }
+
+function onDataRefreshed (evt) {
+    build_graph_from_data(container,data,10);
+} 
 
 function init(){
     var container = document.getElementById("container");
@@ -248,6 +255,7 @@ function init(){
         container.appendChild(tr);
         build_graph(container,from.value,to.value,select.value);
     }
+    container.addEventListener('datarefreshed',onDataRefreshed,false);
 }
 
 function GetFloatValueOfAttr (element,attr) {
