@@ -1,13 +1,75 @@
 <html>
 <head>
 <link href="./webkit-who.css" media="screen" rel="Stylesheet" type="text/css"/> 
-<script type="text/javascript"
-  src="dygraph-combined.js"></script>
-<script type="text/javascript"
-  src="webkit-who.js"></script>
+<script type="text/javascript" src="dygraph-combined.js"></script>
+<script type="text/javascript" src="webkit-who.js"></script>
 </head>
 <body>
-<div id="container" style="width:100%">
-</div>
+<p>WebKit Commits between 
+<input type='number' id='from'></input>
+ and <input type='number' id='to'>
+ split by 
+<select id='select'>
+    <option>keyword</option>
+    <option>company</option>
+</select>
+<input type='submit' value='Refresh' onclick="refresh()">
+</input>
+</p>
+<div id="container"></div>
 </body>
+<script>
+
+    function refresh () {
+        graph.refreshData(from.value,to.value,select.value);            
+    }
+
+    function onRefreshed (evt) {
+        var labels = evt.series;
+        // Create display bar to filter out sequences
+        var dp = document.createElement("p");
+        dp.innerHTML = "Displayed:";
+        for(i=1;i<labels.length;i++){
+            cb = document.createElement('input');
+            cb.id = i-1;
+            cb.type = "checkbox";
+            cb.addEventListener("click",
+                                function(){
+                                    graph.setVisibility(this.id,this.checked);
+                                },
+                                false);
+            cb.checked = true;
+            dp.appendChild(cb);
+            lb = document.createElement('label');
+            lb.for = i-1;
+            lb.innerHTML = ' ' + labels[i];
+            self = this;
+            lb.filter = labels[i];
+            lb.addEventListener("click",
+                                function(){
+//                                    graph.setFilters(this.filter);
+                                    graph.setFilters('features','css');
+                                },
+                                false);            
+            dp.appendChild(lb);
+        }
+        container.appendChild(dp);
+    }
+
+    var from = document.getElementById("from");
+    from.min = 2001;
+    from.max = new Date().getFullYear();
+    from.step = 1;
+    from.value = from.max -1;
+    var to = document.getElementById("to");
+    to.min = 2001;
+    to.max = from.max;
+    to.step = 1;
+    to.value = to.max;
+    var select = document.getElementById("select");    
+    var graph = new WWGraph(document.getElementById("container"),10);
+    container.addEventListener('graphrefreshed',onRefreshed,false);    
+    refresh();
+    
+</script>
 </html>
