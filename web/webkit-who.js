@@ -2,6 +2,19 @@ function get_daily_commits(data){
   return get_daily_commits_filtered(data,null,true);
 }
 
+function get_daily_commits_for_keyword(data,keyword){
+  commits = new Array();
+  for (var i=0;i<data.length;i++){
+      date = data[i][0];
+      nb = data[i][1];
+      records = data[i][2];
+      if(records[keyword]){
+        commits.push([date,nb,records[keyword][1]]);
+      }
+  } 
+  return commits;
+}
+
 // filters is an array of filter
 // Each filter is either:
 // - a string -> value = count for that keyword
