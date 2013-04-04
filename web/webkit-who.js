@@ -172,12 +172,12 @@ function build_graph_from_data(container,data,nbseries){
     container.appendChild(dp);
 }
 
-// Build a webkit commit graph
+// Fetch Webkit commit data
 // container: containing DOM element
 // from: year (>2001)
 // to: year
-// filter: feature/company
-function build_graph(container,from,to,filter){
+// first-level filter: 'keyword'/'company'
+function refreshData(container,from,to,filter){
 
     data = [];
     year = from;
@@ -204,7 +204,8 @@ function build_graph(container,from,to,filter){
             } 
            else 
             { 
-               alert("Error: returned status code " + xhr.status + " " + xhr.statusText); 
+               container.innerHTML = "<p>Unable to fetch commits data</p>" +
+                "<p>XHR status code: " + xhr.status + " " + xhr.statusText + "</p>"; 
            } 
         } 
      }; 
@@ -255,11 +256,11 @@ function init(){
         bt.value = "Refresh";
         bt.onclick = function(){
             for(var i=0;i<2;i++) container.removeChild(tr.nextSibling);
-            build_graph(container,from.value,to.value,select.value);            
+            refreshData(container,from.value,to.value,select.value);            
         };
         tr.appendChild(bt);
         container.appendChild(tr);
-        build_graph(container,from.value,to.value,select.value);
+        refreshData(container,from.value,to.value,select.value);
     }
     container.addEventListener('datarefreshed',onDataRefreshed,false);
 }
