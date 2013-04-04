@@ -25,10 +25,18 @@
     }
 
     function onRefreshed (evt) {
+        var filters = evt.filters;
         var labels = evt.series;
         // Create display bar to filter out sequences
         var dp = document.createElement("p");
-        dp.innerHTML = "Displayed:";
+        dp.innerHTML = "Commits ";
+        if(filters && filters[0]) {
+            dp.innerHTML += 'for ' + filters[0];
+            if(filters[1]) {
+                dp.innerHTML += ' on ' + filters[1];
+            }
+        }
+        dp.innerHTML += ":";
         for(i=1;i<labels.length;i++){
             cb = document.createElement('input');
             cb.id = i-1;
@@ -45,12 +53,15 @@
             lb.innerHTML = ' ' + labels[i];
             self = this;
             lb.filter = labels[i];
+            if (!filters || filters.length == 1) {
             lb.addEventListener("click",
                                 function(){
-//                                    graph.setFilters(this.filter);
-                                    graph.setFilters('features','css');
+                                    var newFilters = filters ? filters : [];
+                                    newFilters.push(this.filter); 
+                                    graph.setFilters(newFilters);
                                 },
-                                false);            
+                                false);
+            }           
             dp.appendChild(lb);
         }
         container.appendChild(dp);
@@ -68,7 +79,9 @@
     to.value = to.max;
     var select = document.getElementById("select");    
     var graph = new WWGraph(document.getElementById("container"),10);
-    container.addEventListener('graphrefreshed',onRefreshed,false);    
+    container.addEventListener('graphrefreshed',onRefreshed,false);
+    var filter1 = '';
+    var filter2 = '';       
     refresh();
     
 </script>

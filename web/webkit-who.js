@@ -8,7 +8,10 @@ function WWGraph (container,nbseries) {
     var g = null;
     
     // Series for current graph
-    var series = null;
+    var currentSeries = null;
+    
+    // Filters applied on current graph
+    var currentFilters = null;
     
     /* WWGraph Methods */
     var get_daily_commits_for_keyword = function (data,keyword){
@@ -138,10 +141,10 @@ function WWGraph (container,nbseries) {
         keywords = get_tags_count(data);
         // Retain the first nbseries contributing keywords as individual filters
         filters = [];
-        series = ['Date'];
+        currentSeries = ['Date'];
         for(var i=0;(i<keywords.length && i<nbseries);i++){
          filters.push(keywords[i][0]);
-         series.push(keywords[i][0]);
+         currentSeries.push(keywords[i][0]);
         }
         // Aggregate the other keywords into a single filter
         aggregated = [];
@@ -149,20 +152,21 @@ function WWGraph (container,nbseries) {
          aggregated.push(keywords[i][0]);
         }
         filters.push(aggregated);
-        series.push('Other');
+        currentSeries.push('Other');
         // Get daily commits filtered             
         daily = get_daily_commits_filtered(data,filters,false);             
         g = new Dygraph(
             graphDiv,
             daily,
-            {   labels: series,
+            {   labels: currentSeries,
                 rollPeriod: 90,
                 showRoller: true 
             }
         );
         var evt = document.createEvent("Event");
         evt.initEvent("graphrefreshed",true,true); 
-        evt.series = series;
+        evt.series = currentSeries;
+        evt.filters = currentFilters;
         container.dispatchEvent(evt);
     }
 
@@ -175,6 +179,8 @@ function WWGraph (container,nbseries) {
 
         self = this;
         data = [];
+        currentFilters = null;
+
         year = Math.max(2001,from);
 
         fetch_next_dataset = function(){
@@ -209,15 +215,16 @@ function WWGraph (container,nbseries) {
         fetch_next_dataset();
     }
     
-    this.setFilters = function (first,second) {
-        var filtered = null;
-        if (first) {
-            filtered = get_daily_commits_for_keyword(data,first);
-            if (second) {
-                filtered = get_daily_commits_for_keyword(filtered,second);
+    this.setFilters = function (newfilters) {
+        var filtered = data;
+        currentFilters = newfilters;
+        if (currentFilters && currentFilters[0]) {
+            filtered = get_daily_commits_for_keyword(filtered,currentFilters[0]);
+            if (currentFilters[1]) {
+                filtered = get_daily_commits_for_keyword(filtered,currentFilters[1]);
             }
-            this.build_graph_from_data(filtered);
         }
+        this.build_graph_from_data(filtered);
     }
     
     this.setVisibility = function ( index, visible ) {
