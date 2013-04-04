@@ -41,7 +41,11 @@ function get_daily_commits_filtered(data,filters,add_sum){
               for(var k=0;k<split_filters.length;k++){
                 split_record = records[split_filters[k]];
                 if(split_record){
-                    split_count += split_record[0];
+                    if (split_record instanceof Array){        
+                        split_count += split_record[0];
+                    } else {
+                        split_count += split_record;
+                    }
                 }
               }
               row.push(split_count);
@@ -72,7 +76,13 @@ function get_tags_count(data){
   for (var i=0;i<data.length;i++){
     var records = data[i][2];
     for (var tag in records){
-        var tag_count = records[tag][0];
+        var record = records[tag];
+        var tag_count;
+        if (record instanceof Array){
+            tag_count = records[tag][0];
+        } else {
+            tag_count = records[tag];
+        }
         var tag_tuple = get_tuple_for_tag(tags,tag);
         if (tag_tuple){
             tag_tuple[1] += tag_count;
@@ -80,13 +90,15 @@ function get_tags_count(data){
             var i = tags.push([tag,tag_count,[]]);
             tag_tuple = tags[i-1];
         }
-        for (var subtag in records[tag][1]){
-            subtag_count = records[tag][1][subtag][0];
-            subtag_tuple = get_tuple_for_tag(tag_tuple[2],subtag);
-            if (subtag_tuple){
-                subtag_tuple[1] += subtag_count;
-            }else{
-                tag_tuple[2].push([subtag,subtag_count]);
+        if (record instanceof Array){        
+            for (var subtag in records[tag][1]){
+                subtag_count = records[tag][1][subtag][0];
+                subtag_tuple = get_tuple_for_tag(tag_tuple[2],subtag);
+                if (subtag_tuple){
+                    subtag_tuple[1] += subtag_count;
+                }else{
+                    tag_tuple[2].push([subtag,subtag_count]);
+                }
             }
         }
     }
