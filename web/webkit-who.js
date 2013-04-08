@@ -160,7 +160,8 @@ function WWGraph (container,nbseries) {
             daily,
             {   labels: currentSeries,
                 rollPeriod: 90,
-                showRoller: true 
+                showRoller: true,
+                stackedGraph: true
             }
         );
         var evt = document.createEvent("Event");
